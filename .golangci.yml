@@ -1,0 +1,138 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - canonicalheader
+    - contextcheck
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - gocritic
+    - godot
+    - gosec
+    - govet
+    - iface
+    - ineffassign
+    - misspell
+    - modernize
+    - musttag
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - noctx
+    - noinlineerr
+    - nolintlint
+    - perfsprint
+    - predeclared
+    - reassign
+    - recvcheck
+    - revive
+    - staticcheck
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+  settings:
+    errcheck:
+      check-type-assertions: true
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      enable-all: true
+      disabled-checks:
+        - commentedOutCode
+        - hugeParam
+        - importShadow
+        - paramTypeCombine
+        - rangeValCopy
+        - ruleguard
+        - unnamedResult
+        - whyNoLint
+    gosec:
+      excludes:
+        - G104
+        - G115
+        - G704
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+        - shadow
+    misspell:
+      locale: US
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    perfsprint:
+      strconcat: false
+    revive:
+      enable-default-rules: true
+      rules:
+        - name: unused-parameter
+          disabled: true
+        - name: bool-literal-in-expr
+        - name: early-return
+          arguments:
+            - preserve-scope
+        - name: identical-branches
+        - name: if-return
+        - name: indent-error-flow
+          arguments:
+            - preserve-scope
+        - name: redundant-import-alias
+        - name: struct-tag
+        - name: superfluous-else
+          arguments:
+            - preserve-scope
+        - name: time-equal
+        - name: unconditional-recursion
+        - name: unexported-naming
+        - name: unnecessary-stmt
+        - name: useless-break
+    staticcheck:
+      checks:
+        - all
+        - -QF1008
+    usetesting:
+      context-background: true
+      context-todo: true
+  exclusions:
+    generated: strict
+    warn-unused: true
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+      - path: (example_.*test\.go|_examples/)
+        linters:
+          - errcheck
+        text: Close
+      - path: _examples/
+        linters:
+          - forbidigo
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/synthient/synthient-go
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
