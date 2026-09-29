@@ -203,7 +203,7 @@ func (r *reflector) do(req *reflectionpb.ServerReflectionRequest) (*reflectionpb
 	}
 	errResp := resp.GetErrorResponse()
 	if errResp != nil {
-		return nil, status.Error(codes.Code(errResp.GetErrorCode()), errResp.GetErrorMessage())
+		return nil, status.Error(codes.Code(errResp.GetErrorCode()), errResp.GetErrorMessage()) //nolint:gosec // gRPC status codes are small non-negative values
 	}
 	return resp, nil
 }

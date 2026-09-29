@@ -134,7 +134,7 @@ func TestAPIError(t *testing.T) {
 func TestAPIErrorPreservesDeadlineDuringBodyRead(t *testing.T) {
 	t.Parallel()
 	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Request-Id", "req-timeout")
+		w.Header().Set("X-Request-ID", "req-timeout")
 		w.WriteHeader(http.StatusForbidden)
 		err := http.NewResponseController(w).Flush()
 		if err != nil {

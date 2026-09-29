@@ -17,10 +17,10 @@ func TestResponseHookSeesRetriesPagesAndDecodeFailures(t *testing.T) {
 	var requests atomic.Int32
 	srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
 		n := requests.Add(1)
-		w.Header().Set("X-Request-Id", fmt.Sprintf("req-%d", n))
-		w.Header().Set("RateLimit-Limit", "200")
-		w.Header().Set("RateLimit-Remaining", "199")
-		w.Header().Set("RateLimit-Reset", "10")
+		w.Header().Set("X-Request-ID", fmt.Sprintf("req-%d", n))
+		w.Header().Set("Ratelimit-Limit", "200")
+		w.Header().Set("Ratelimit-Remaining", "199")
+		w.Header().Set("Ratelimit-Reset", "10")
 		if n == 1 {
 			w.Header().Set("Retry-After", "3")
 			writeJSON(w, http.StatusTooManyRequests, `{}`)
@@ -64,7 +64,7 @@ func TestResponseHookSeesRetriesPagesAndDecodeFailures(t *testing.T) {
 		if meta.StatusCode != wantStatus || meta.RequestID != fmt.Sprintf("req-%d", i+1) {
 			t.Errorf("response %d = %+v", i, meta)
 		}
-		if meta.Header.Get("RateLimit-Limit") != "200" || meta.Header.Get("RateLimit-Remaining") != "199" || meta.Header.Get("RateLimit-Reset") != "10" {
+		if meta.Header.Get("Ratelimit-Limit") != "200" || meta.Header.Get("Ratelimit-Remaining") != "199" || meta.Header.Get("Ratelimit-Reset") != "10" {
 			t.Errorf("missing rate limit headers: %v", meta.Header)
 		}
 	}
