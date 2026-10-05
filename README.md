@@ -28,7 +28,9 @@ info, err := client.LookupIP(ctx, netip.MustParseAddr("8.8.8.8"))
 if err != nil {
 	log.Fatal(err)
 }
-fmt.Println(info.Network.ISP, info.Intelligence.RiskScore)
+if info.Intelligence != nil {
+	fmt.Println(info.Intelligence.RiskScore, info.Intelligence.Categories)
+}
 ```
 
 Look up many addresses in one request:
@@ -42,7 +44,9 @@ if err != nil {
 	log.Fatal(err)
 }
 for _, result := range results {
-	fmt.Println(result.IP, result.Intelligence.RiskScore)
+	if result.Intelligence != nil {
+		fmt.Println(result.IP, result.Intelligence.RiskScore)
+	}
 }
 ```
 
