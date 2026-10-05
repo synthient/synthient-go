@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -66,6 +67,39 @@ func TestResponseHookSeesRetriesPagesAndDecodeFailures(t *testing.T) {
 		}
 		if meta.Header.Get("Ratelimit-Limit") != "200" || meta.Header.Get("Ratelimit-Remaining") != "199" || meta.Header.Get("Ratelimit-Reset") != "10" {
 			t.Errorf("missing rate limit headers: %v", meta.Header)
+		}
+		want := RateLimit{Limit: 200, Remaining: 199, Reset: 10 * time.Second}
+		if meta.RateLimit == nil || *meta.RateLimit != want {
+			t.Errorf("response %d rate limit = %+v, want %+v", i, meta.RateLimit, want)
+		}
+	}
+}
+
+func TestParseRateLimit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		header http.Header
+		want   *RateLimit
+	}{
+		{
+			name:   "all headers",
+			header: http.Header{"Ratelimit-Limit": {"20"}, "Ratelimit-Remaining": {"0"}, "Ratelimit-Reset": {"3"}},
+			want:   &RateLimit{Limit: 20, Remaining: 0, Reset: 3 * time.Second},
+		},
+		{
+			name:   "negative reset",
+			header: http.Header{"Ratelimit-Limit": {"20"}, "Ratelimit-Remaining": {"5"}, "Ratelimit-Reset": {"-1"}},
+			want:   &RateLimit{Limit: 20, Remaining: 5},
+		},
+		{name: "no headers", header: http.Header{}},
+		{name: "missing reset", header: http.Header{"Ratelimit-Limit": {"20"}, "Ratelimit-Remaining": {"5"}}},
+		{name: "malformed limit", header: http.Header{"Ratelimit-Limit": {"lots"}, "Ratelimit-Remaining": {"5"}, "Ratelimit-Reset": {"3"}}},
+	}
+	for _, tt := range tests {
+		got := parseRateLimit(tt.header)
+		if !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("%s: parseRateLimit = %+v, want %+v", tt.name, got, tt.want)
 		}
 	}
 }

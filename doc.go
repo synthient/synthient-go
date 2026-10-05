@@ -32,8 +32,8 @@
 // APIError.Error contains only the HTTP status. Server-provided details are
 // available in its fields and can contain sensitive data. Body read failures
 // preserve errors.Is checks for context cancellation and deadlines.
-// WithResponseHook exposes request IDs and rate-limit headers on both successful
-// and failed API responses, including each retry and page.
+// WithResponseHook exposes request IDs and rate limits on both successful and
+// failed API responses, including each retry and page.
 //
 // # Retries
 //

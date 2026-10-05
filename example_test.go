@@ -71,7 +71,9 @@ func ExampleClient_LookupIPs() {
 func ExampleWithResponseHook() {
 	client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"),
 		synthient.WithResponseHook(func(_ context.Context, meta synthient.ResponseMetadata) {
-			fmt.Println(meta.StatusCode, meta.Header.Get("RateLimit-Remaining"))
+			if meta.RateLimit != nil {
+				fmt.Println(meta.StatusCode, meta.RateLimit.Remaining, meta.RateLimit.Reset)
+			}
 		}),
 	)
 	if err != nil {

@@ -227,6 +227,7 @@ func (c *Client) attempt(ctx context.Context, r request) (*http.Response, error)
 		c.onResponse(ctx, ResponseMetadata{
 			StatusCode: resp.StatusCode,
 			RequestID:  resp.Header.Get("X-Request-ID"),
+			RateLimit:  parseRateLimit(resp.Header),
 			Header:     resp.Header.Clone(),
 		})
 	}
