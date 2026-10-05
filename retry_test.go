@@ -108,6 +108,7 @@ func TestBilledRequestsPreserveWireFormatAndRetry429(t *testing.T) {
 						t.Errorf("protocol = %s, want HTTP2: %v", r.Proto, http2)
 					}
 					if requests.Add(1) == 1 {
+						w.Header().Set("Retry-After", "1")
 						writeJSON(w, http.StatusTooManyRequests, `{}`)
 						return
 					}
@@ -144,6 +145,7 @@ func TestRetryPolicy(t *testing.T) {
 	tests := []struct {
 		name         string
 		statuses     []int
+		retryAfter   string
 		call         func(context.Context, *Client) error
 		wantRequests int32
 		wantStatus   int
@@ -151,7 +153,10 @@ func TestRetryPolicy(t *testing.T) {
 		{name: "free operation retries 503", statuses: []int{503, 502, 200}, call: account, wantRequests: 3},
 		{name: "free operation gives up", statuses: []int{503, 503, 503, 200}, call: account, wantRequests: 3, wantStatus: 503},
 		{name: "free operation does not retry 400", statuses: []int{400, 200}, call: account, wantRequests: 1, wantStatus: 400},
-		{name: "billed lookup retries 429", statuses: []int{429, 200}, call: lookupIP, wantRequests: 2},
+		{name: "free operation retries 429 with Retry-After", statuses: []int{429, 200}, retryAfter: "0", call: account, wantRequests: 2},
+		{name: "free operation does not retry 429 without Retry-After", statuses: []int{429, 200}, call: account, wantRequests: 1, wantStatus: 429},
+		{name: "billed lookup retries 429 with Retry-After", statuses: []int{429, 200}, retryAfter: "1", call: lookupIP, wantRequests: 2},
+		{name: "billed lookup does not retry 429 without Retry-After", statuses: []int{429, 200}, call: lookupIP, wantRequests: 1, wantStatus: 429},
 		{name: "billed lookup does not retry 500", statuses: []int{500, 200}, call: lookupIP, wantRequests: 1, wantStatus: 500},
 		{name: "billed lookup does not retry 503", statuses: []int{503, 200}, call: lookupIP, wantRequests: 1, wantStatus: 503},
 	}
@@ -160,8 +165,11 @@ func TestRetryPolicy(t *testing.T) {
 			t.Parallel()
 			var requests atomic.Int32
 			srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-				n := requests.Add(1)
-				writeJSON(w, tt.statuses[n-1], `{}`)
+				status := tt.statuses[requests.Add(1)-1]
+				if status == http.StatusTooManyRequests && tt.retryAfter != "" {
+					w.Header().Set("Retry-After", tt.retryAfter)
+				}
+				writeJSON(w, status, `{}`)
 			})
 			c := newTestClient(t, srv)
 

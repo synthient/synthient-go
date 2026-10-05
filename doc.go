@@ -37,11 +37,15 @@
 //
 // # Retries
 //
-// Requests that cost no credits are retried on 429, 500, 502, 503, and 504
-// responses and on transport errors. Billed lookups (LookupIP, LookupIPs, and
-// LookupDomain) are retried only on 429, which the API returns before doing
-// any work. Billed requests have non-rewindable bodies to prevent implicit
-// transport replays; custom transports must honor that restriction.
+// Requests that cost no credits are retried on 500, 502, 503, and 504
+// responses, on transport errors, and on 429 responses that carry
+// Retry-After. Billed lookups (LookupIP, LookupIPs, and LookupDomain) are
+// retried only on 429 responses that carry Retry-After, which the rate
+// limiter returns before doing any work. A 429 without Retry-After means the
+// key's monthly request budget is spent or it has too many open streams, so
+// it is returned without a retry. Billed requests have non-rewindable bodies
+// to prevent implicit transport replays; custom transports must honor that
+// restriction.
 // Retries back off exponentially with jitter, honor Retry-After, and stop
 // when the context is done. Set the retry count with WithMaxRetries.
 //

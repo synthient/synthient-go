@@ -16,8 +16,9 @@ const maxEventSize = 16 << 20
 // over the iterator opens a new connection, which the server closes cleanly
 // after about 30 minutes. A clean close ends the iteration without an error.
 // Any other failure, including a non-success response (as an *APIError) or
-// a canceled ctx, is yielded once and ends the iteration. Breaking out of
-// the loop closes the connection.
+// a canceled ctx, is yielded once and ends the iteration. A 429 *APIError
+// without RetryAfter means the key already has too many open streams.
+// Breaking out of the loop closes the connection.
 //
 // The API has no resume cursor, so events sent between connections are
 // missed. Loop over Stream again to reconnect.

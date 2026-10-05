@@ -20,20 +20,22 @@ const (
 	// retryTransient retries rate limits, gateway and server errors, and
 	// transport failures. It is used for operations that cost no credits.
 	retryTransient retryPolicy = iota
-	// retryRateLimit retries only 429 responses, which the API rejects before
+	// retryRateLimit retries only rate limits, which the API rejects before
 	// doing any work. It is used for billed lookups, where a retried server
 	// error could be charged twice.
 	retryRateLimit
 )
 
-func (p retryPolicy) retryStatus(status int) bool {
-	if status == http.StatusTooManyRequests {
-		return true
+func (p retryPolicy) retries(resp *http.Response) bool {
+	if resp.StatusCode == http.StatusTooManyRequests {
+		// Only the rate limiter sets Retry-After. Without it, the key's monthly
+		// budget is spent or it has too many open streams.
+		return resp.Header.Get("Retry-After") != ""
 	}
 	if p != retryTransient {
 		return false
 	}
-	switch status {
+	switch resp.StatusCode {
 	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
 		return true
 	default:
@@ -57,7 +59,7 @@ func (c *Client) send(ctx context.Context, r request) (*http.Response, error) {
 			continue
 		}
 
-		if !canRetry || !r.policy.retryStatus(resp.StatusCode) {
+		if !canRetry || !r.policy.retries(resp) {
 			return resp, nil
 		}
 		retryAfter := parseRetryAfter(resp.Header)

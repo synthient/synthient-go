@@ -149,6 +149,12 @@ func TestStreamErrors(t *testing.T) {
 			wantStatus: http.StatusForbidden,
 		},
 		{
+			name:       "too many open streams",
+			status:     http.StatusTooManyRequests,
+			body:       `{"title":"Too Many Requests","status":429,"detail":"too many concurrent streams"}`,
+			wantStatus: http.StatusTooManyRequests,
+		},
+		{
 			name:       "truncated line",
 			status:     http.StatusOK,
 			body:       `{"ip":"203.0.113.10"}` + "\n" + `{"ip":`,
