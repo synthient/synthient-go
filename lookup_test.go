@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/netip"
 	"reflect"
+	"slices"
 	"sync/atomic"
 	"testing"
 )
@@ -209,6 +210,11 @@ func TestLookupIPsEdgeCases(t *testing.T) {
 	_, err = c.LookupIPs(t.Context(), []netip.Addr{netip.MustParseAddr("1.1.1.1"), {}})
 	if err == nil {
 		t.Error("LookupIPs succeeded with an invalid address")
+	}
+	tooMany := slices.Repeat([]netip.Addr{netip.MustParseAddr("1.1.1.1")}, maxBatchSize+1)
+	_, err = c.LookupIPs(t.Context(), tooMany)
+	if err == nil {
+		t.Errorf("LookupIPs succeeded with %d addresses", len(tooMany))
 	}
 	if requests.Load() != 0 {
 		t.Errorf("made %d requests, want 0", requests.Load())

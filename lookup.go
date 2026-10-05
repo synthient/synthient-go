@@ -284,6 +284,8 @@ type LookupDomainParams struct {
 	Limit int
 }
 
+const maxBatchSize = 1000
+
 type batchRequest struct {
 	IPs []string `json:"ips"`
 }
@@ -312,12 +314,19 @@ func (c *Client) LookupIP(ctx context.Context, ip netip.Addr) (*IPInfo, error) {
 	return &info, nil
 }
 
-// LookupIPs looks up as many as 1000 addresses in one request. The API bills
-// ceil(n*0.9) credits for n unique addresses. Duplicate addresses are
-// collapsed into one result, so match results by IP rather than by index.
+// LookupIPs looks up as many as 1000 addresses in one request. Private and
+// reserved addresses are skipped and duplicates collapse into one result, so
+// there can be fewer results than addresses. Match results by IP, which the
+// API canonicalizes, rather than by index. A batch with no address the API
+// can look up returns a 422 *APIError. The API bills ceil(n*0.9) credits for
+// the n distinct addresses it looks up, and bills nothing if the account
+// cannot cover the whole batch.
 func (c *Client) LookupIPs(ctx context.Context, ips []netip.Addr) ([]IPInfo, error) {
 	if len(ips) == 0 {
 		return nil, nil
+	}
+	if len(ips) > maxBatchSize {
+		return nil, fmt.Errorf("synthient: %d addresses exceed the batch limit of %d", len(ips), maxBatchSize)
 	}
 
 	addrs := make([]string, len(ips))
