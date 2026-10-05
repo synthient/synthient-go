@@ -3,6 +3,7 @@ package synthient
 import (
 	"encoding/json"
 	"io"
+	"mime"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,7 +27,8 @@ type APIError struct {
 	Type string
 	// Title is a short summary of the problem type.
 	Title string
-	// Detail explains this occurrence of the problem.
+	// Detail explains this occurrence of the problem. For a plain-text error,
+	// such as the edge's 401 for a malformed key, it is the response body.
 	Detail string
 	// Errors maps request fields to validation messages.
 	Errors map[string][]string
@@ -83,6 +85,10 @@ func newAPIError(resp *http.Response) *APIError {
 	var p problem
 	err = json.Unmarshal(body, &p)
 	if err != nil {
+		mediaType, _, _ := mime.ParseMediaType(resp.Header.Get("Content-Type"))
+		if mediaType == "text/plain" {
+			e.Detail = strings.TrimSpace(string(body))
+		}
 		return e
 	}
 	e.Type = p.Type

@@ -78,8 +78,16 @@ func TestAPIError(t *testing.T) {
 			status:      http.StatusUnauthorized,
 			contentType: "text/plain",
 			body:        "401 invalid api key",
-			want:        APIError{StatusCode: http.StatusUnauthorized},
+			want:        APIError{StatusCode: http.StatusUnauthorized, Detail: "401 invalid api key"},
 			wantMessage: "synthient: 401 Unauthorized",
+		},
+		{
+			name:        "plain text router response",
+			status:      http.StatusNotFound,
+			contentType: "text/plain; charset=utf-8",
+			body:        "404 page not found\n",
+			want:        APIError{StatusCode: http.StatusNotFound, Detail: "404 page not found"},
+			wantMessage: "synthient: 404 Not Found",
 		},
 		{
 			name:        "empty body with retry after",
