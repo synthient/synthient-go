@@ -2,11 +2,16 @@ package synthient
 
 import (
 	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"maps"
 	"net/netip"
 	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -50,6 +55,9 @@ var schemaTypes = map[string]reflect.Type{
 	"Stats":                    reflect.TypeFor[DomainStats](),
 	"SubdomainEntry":           reflect.TypeFor[SubdomainCount](),
 	"TimeSeriesEntry":          reflect.TypeFor[TimeSeriesPoint](),
+	"TLSClientHello":           reflect.TypeFor[TLSClientHello](),
+	"TLSCodeName":              reflect.TypeFor[TLSCodeName](),
+	"TLSExtension":             reflect.TypeFor[TLSExtension](),
 	"TorrentFileEntry":         reflect.TypeFor[TorrentFile](),
 	"TorrentPeerEntry":         reflect.TypeFor[TorrentPeer](),
 	"TorrentStreamEntry":       reflect.TypeFor[TorrentEvent](),
@@ -57,15 +65,22 @@ var schemaTypes = map[string]reflect.Type{
 	"ValidationProblemDetails": reflect.TypeFor[problem](),
 }
 
-// unusedSchemas are defined in the spec but not referenced by any operation.
-var unusedSchemas = []string{"JA3StreamEntry", "JA4StreamEntry"}
-
 type specSchema struct {
-	Ref        string                `json:"$ref"`
-	Type       string                `json:"type"`
-	Format     string                `json:"format"`
-	Properties map[string]specSchema `json:"properties"`
-	Items      *specSchema           `json:"items"`
+	Ref            string                `json:"$ref"`
+	Type           string                `json:"type"`
+	Format         string                `json:"format"`
+	Properties     map[string]specSchema `json:"properties"`
+	Items          *specSchema           `json:"items"`
+	AllOf          []specSchema          `json:"allOf"`
+	Enum           []string              `json:"enum"`
+	ExtensibleEnum []string              `json:"x-extensible-enum"`
+}
+
+func (s specSchema) enumValues() []string {
+	if s.Items != nil {
+		return s.Items.enumValues()
+	}
+	return slices.Concat(s.Enum, s.ExtensibleEnum)
 }
 
 type spec struct {
@@ -96,9 +111,7 @@ func TestSpecSchemasAreModeled(t *testing.T) {
 	for _, name := range slices.Sorted(maps.Keys(s.Components.Schemas)) {
 		typ, ok := schemaTypes[name]
 		if !ok {
-			if !slices.Contains(unusedSchemas, name) {
-				t.Errorf("schema %s has no Go type in schemaTypes", name)
-			}
+			t.Errorf("schema %s has no Go type in schemaTypes", name)
 			continue
 		}
 		checkFields(t, name, s.Components.Schemas[name], typ)
@@ -145,6 +158,9 @@ func compatible(schema specSchema, typ reflect.Type) bool {
 	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
+	if len(schema.AllOf) == 1 {
+		return compatible(schema.AllOf[0], typ)
+	}
 	if schema.Ref != "" {
 		name, ok := strings.CutPrefix(schema.Ref, "#/components/schemas/")
 		return ok && schemaTypes[name] == typ
@@ -154,6 +170,9 @@ func compatible(schema specSchema, typ reflect.Type) bool {
 	}
 	switch schema.Type {
 	case "string":
+		if schema.Format == "byte" {
+			return typ == reflect.TypeFor[[]byte]()
+		}
 		return typ.Kind() == reflect.String || typ == reflect.TypeFor[netip.Addr]() || typ == reflect.TypeFor[time.Time]()
 	case "integer":
 		if schema.Format == "int64" {
@@ -171,6 +190,90 @@ func compatible(schema specSchema, typ reflect.Type) bool {
 	default:
 		return false
 	}
+}
+
+func TestSpecEnumsAreModeled(t *testing.T) {
+	t.Parallel()
+	s := loadSpec(t)
+	constants := stringConstants(t)
+
+	for _, name := range slices.Sorted(maps.Keys(s.Components.Schemas)) {
+		typ, ok := schemaTypes[name]
+		if !ok {
+			continue
+		}
+		fields := jsonFields(typ)
+		schema := s.Components.Schemas[name]
+		for _, prop := range slices.Sorted(maps.Keys(schema.Properties)) {
+			values := schema.Properties[prop].enumValues()
+			field, ok := fields[prop]
+			// A single-value enum, such as a stream's protocol, is a constant
+			// and stays a plain string.
+			if len(values) < 2 || !ok {
+				continue
+			}
+			enum := field.Type
+			if enum.Kind() == reflect.Slice {
+				enum = enum.Elem()
+			}
+			if enum.PkgPath() == "" {
+				t.Errorf("%s.%s is an enum in the spec but %s in %s", name, prop, field.Type, typ)
+				continue
+			}
+			got := slices.Sorted(slices.Values(constants[enum.Name()]))
+			want := slices.Sorted(slices.Values(values))
+			if !slices.Equal(got, want) {
+				t.Errorf("%s constants are %q, but the spec's %s.%s values are %q", enum.Name(), got, name, prop, want)
+			}
+		}
+	}
+}
+
+// stringConstants returns the values of the package's typed string constants,
+// keyed by type name.
+func stringConstants(t *testing.T) map[string][]string {
+	t.Helper()
+	paths, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	constants := map[string][]string{}
+	fset := token.NewFileSet()
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, ok := spec.(*ast.ValueSpec)
+				if !ok || len(value.Values) != 1 {
+					continue
+				}
+				typ, ok := value.Type.(*ast.Ident)
+				if !ok {
+					continue
+				}
+				lit, ok := value.Values[0].(*ast.BasicLit)
+				if !ok || lit.Kind != token.STRING {
+					continue
+				}
+				text, err := strconv.Unquote(lit.Value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				constants[typ.Name] = append(constants[typ.Name], text)
+			}
+		}
+	}
+	return constants
 }
 
 func TestSchemaReferencesMatchExactTypes(t *testing.T) {

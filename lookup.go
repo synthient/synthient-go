@@ -31,18 +31,35 @@ type Network struct {
 	ASN int64 `json:"asn"`
 	// ISP is the name of the internet service provider.
 	ISP string `json:"isp"`
-	// Org is the organization the address is registered to.
+	// Org is the organization the address is registered to, or empty if
+	// unknown.
 	Org string `json:"org"`
-	// Domain is the network operator's domain.
+	// Domain is the network operator's domain, or empty if unknown.
 	Domain string `json:"domain"`
-	// Type is the network type, such as "RESIDENTIAL", "MOBILE", or
-	// "DATACENTER". New values may be added.
-	Type string `json:"type"`
-	// AbuseEmail is the operator's abuse contact email.
+	// Type is the network type.
+	Type NetworkType `json:"type"`
+	// AbuseEmail is the operator's abuse contact email, or empty if unknown.
 	AbuseEmail string `json:"abuse_email"`
-	// AbusePhone is the operator's abuse contact phone number.
+	// AbusePhone is the operator's abuse contact phone number, or empty if
+	// unknown.
 	AbusePhone string `json:"abuse_phone"`
 }
+
+// NetworkType is the kind of network that announces an address. New values
+// may be added.
+type NetworkType string
+
+// Network types.
+const (
+	NetworkTypeMobile       NetworkType = "MOBILE"
+	NetworkTypeSatellite    NetworkType = "SATELLITE"
+	NetworkTypeInFlightWiFi NetworkType = "IN_FLIGHT_WIFI"
+	NetworkTypeResidential  NetworkType = "RESIDENTIAL"
+	NetworkTypeCorporate    NetworkType = "CORPORATE"
+	NetworkTypeAcademic     NetworkType = "ACADEMIC"
+	NetworkTypeDatacenter   NetworkType = "DATACENTER"
+	NetworkTypeGovernment   NetworkType = "GOVERNMENT"
+)
 
 // Location is the geolocation of an address.
 type Location struct {
@@ -91,20 +108,34 @@ type Provider struct {
 
 // Device is a device type seen behind an address.
 type Device struct {
-	// OS is the operating system, such as "ANDROID" or "WINDOWS".
-	OS string `json:"os"`
+	// OS is the operating system.
+	OS OS `json:"os"`
 	// Version is the operating system version.
 	Version string `json:"version"`
 	// LastSeen is when the device was last seen.
 	LastSeen Timestamp `json:"last_seen"`
 }
 
+// OS is a device operating system. New values may be added.
+type OS string
+
+// Operating systems.
+const (
+	OSAndroid  OS = "Android"
+	OSChromeOS OS = "Chrome OS"
+	OSFreeBSD  OS = "FreeBSD"
+	OSiOS      OS = "iOS"
+	OSLinux    OS = "Linux"
+	OSMacOSX   OS = "Mac OS X"
+	OSWindows  OS = "Windows"
+)
+
 // DomainInfo is the honeypot traffic Synthient has observed for a domain.
 type DomainInfo struct {
 	// Domain is the domain that was looked up.
 	Domain string `json:"domain"`
-	// Status summarizes recent activity, such as "active".
-	Status string `json:"status"`
+	// Status is whether the domain had events in the last 24 hours.
+	Status DomainStatus `json:"status"`
 	// Stats holds aggregate event counts.
 	Stats DomainStats `json:"stats"`
 	// UniqueIPs counts the distinct source addresses.
@@ -120,7 +151,9 @@ type DomainInfo struct {
 	TopPorts []PortCount `json:"top_ports"`
 	// GeoDistribution counts events by source country.
 	GeoDistribution []CountryCount `json:"geo_distribution"`
-	// HourDOWHeatmap counts events by hour of day and day of week.
+	// HourDOWHeatmap counts the last 30 days of events by UTC day of week and
+	// hour, indexed as HourDOWHeatmap[day][hour]. Day 0 is Monday, unlike
+	// time.Weekday, where 0 is Sunday.
 	HourDOWHeatmap [][]int64 `json:"hour_dow_heatmap"`
 	// ActivityStats describes the hourly activity pattern.
 	ActivityStats ActivityStats `json:"activity_stats"`
@@ -128,6 +161,18 @@ type DomainInfo struct {
 	// LookupDomainParams.Limit.
 	RecentEvents []DomainEvent `json:"recent_events"`
 }
+
+// DomainStatus is whether a domain has recent activity.
+type DomainStatus string
+
+// Domain statuses.
+const (
+	// DomainStatusActive means the domain had events in the last 24 hours.
+	DomainStatusActive DomainStatus = "active"
+	// DomainStatusInactive means the domain had no events in the last 24
+	// hours, or has never been observed.
+	DomainStatusInactive DomainStatus = "inactive"
+)
 
 // DomainStats holds aggregate event counts for a domain.
 type DomainStats struct {
@@ -193,8 +238,8 @@ type CountryCount struct {
 
 // ActivityStats describes the hourly activity pattern of a domain.
 type ActivityStats struct {
-	// Cadence describes how regularly events arrive.
-	Cadence string `json:"cadence"`
+	// Cadence describes how events are spread over the last 30 days.
+	Cadence Cadence `json:"cadence"`
 	// MedianPerHour is the median number of events per hour.
 	MedianPerHour int64 `json:"median_per_hour"`
 	// P95PerHour is the 95th percentile of events per hour.
@@ -205,12 +250,25 @@ type ActivityStats struct {
 	QuietHour int `json:"quiet_hour"`
 }
 
+// Cadence is a sentence describing a domain's activity pattern.
+type Cadence string
+
+// Activity cadences.
+const (
+	CadenceNoActivity        Cadence = "No activity in the last 30 days."
+	CadenceEvenlyDistributed Cadence = "Activity is evenly distributed across the day."
+	CadenceBusinessHours     Cadence = "Activity follows a weekday business-hours pattern."
+	CadenceWeekend           Cadence = "Activity follows a weekend pattern."
+	CadenceBurstDriven       Cadence = "Activity is burst-driven with significant peaks."
+)
+
 // DomainEvent is a single honeypot event for a domain.
 type DomainEvent struct {
 	// Timestamp is when the event happened.
 	Timestamp Timestamp `json:"timestamp"`
-	// SourceIPMasked is the source address. The API may mask part of it.
-	SourceIPMasked string `json:"source_ip_masked"`
+	// SourceIP is the full proxy exit address that carried the event. The API
+	// names the field source_ip_masked, but the address is not masked.
+	SourceIP string `json:"source_ip_masked"`
 	// TargetSubdomain is the subdomain that was targeted.
 	TargetSubdomain string `json:"target_subdomain"`
 	// CountryCode is the source country.
@@ -234,8 +292,9 @@ type batchResponse struct {
 	Results []IPInfo `json:"results"`
 }
 
-// LookupIP returns intelligence for an IPv4 or IPv6 address. Each lookup
-// costs one credit.
+// LookupIP returns intelligence for an IPv4 or IPv6 address. Private and
+// reserved addresses return a 422 *APIError. Each lookup costs one credit,
+// and failed lookups are not billed.
 func (c *Client) LookupIP(ctx context.Context, ip netip.Addr) (*IPInfo, error) {
 	if !ip.IsValid() {
 		return nil, errors.New("synthient: invalid IP address")
@@ -287,8 +346,9 @@ func (c *Client) LookupIPs(ctx context.Context, ips []netip.Addr) ([]IPInfo, err
 }
 
 // LookupDomain returns the honeypot traffic observed for a domain.
-// Internationalized names must be sent in Punycode. params may be nil. Each
-// lookup costs one credit.
+// Internationalized names must be sent in Punycode. params may be nil. A
+// domain that has never been observed returns DomainStatusInactive and zero
+// counts rather than an error. Each lookup costs one credit.
 func (c *Client) LookupDomain(ctx context.Context, domain string, params *LookupDomainParams) (*DomainInfo, error) {
 	if domain == "" || domain == "." || domain == ".." {
 		return nil, fmt.Errorf("synthient: invalid domain %q", domain)

@@ -17,7 +17,7 @@ func TestAccount(t *testing.T) {
 			"email": "dev@example.com",
 			"first_name": "Ada",
 			"last_name": "Lovelace",
-			"organization": {"id": "org_01J5XK2ZQ8R6VBT3WE6E7C9D2H", "name": "Example", "relation": "OWNER"},
+			"organization": {"id": "0b9f6a52-3c1d-4e8a-9f27-6d4c1b8e2a70", "name": "Example", "relation": "OWNER"},
 			"scopes": ["BASIC", "PROXY_FEEDS"],
 			"lookup_quota": {"credits": 9000000000, "resets_in": 3600},
 			"api_key": {"id": "6f1c2b1e-8f59-4f4b-9d5e-1f0a7d9c3b21", "name": "ci", "created_at": "2026-05-01T12:00:00Z"}
@@ -33,8 +33,8 @@ func TestAccount(t *testing.T) {
 		Email:        "dev@example.com",
 		FirstName:    "Ada",
 		LastName:     "Lovelace",
-		Organization: Organization{ID: "org_01J5XK2ZQ8R6VBT3WE6E7C9D2H", Name: "Example", Relation: "OWNER"},
-		Scopes:       []string{"BASIC", "PROXY_FEEDS"},
+		Organization: Organization{ID: "0b9f6a52-3c1d-4e8a-9f27-6d4c1b8e2a70", Name: "Example", Relation: RelationOwner},
+		Scopes:       []Scope{ScopeBasic, ScopeProxyFeeds},
 		LookupQuota:  LookupQuota{Credits: 9000000000, ResetsIn: 3600},
 		APIKey: AccountAPIKey{
 			ID:        "6f1c2b1e-8f59-4f4b-9d5e-1f0a7d9c3b21",

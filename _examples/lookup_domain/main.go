@@ -38,6 +38,6 @@ func main() {
 	}
 	for _, event := range domain.RecentEvents {
 		at := event.Timestamp.Time().Format(time.DateTime)
-		fmt.Printf("event: %s %s -> %s:%d\n", at, event.SourceIPMasked, event.TargetSubdomain, event.Port)
+		fmt.Printf("event: %s %s -> %s:%d\n", at, event.SourceIP, event.TargetSubdomain, event.Port)
 	}
 }

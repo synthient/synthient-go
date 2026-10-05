@@ -2,11 +2,12 @@ package synthient
 
 import "time"
 
-// Timestamp is a Unix time as encoded by the API, normally in seconds.
+// Timestamp is a Unix time as encoded by the API. It is in seconds, except on
+// anonymizer and Helios HTTP, HTTPS, and DNS stream events, where it is in
+// milliseconds. Time converts either.
 type Timestamp int64
 
-// Synthient documents millisecond timestamps for some Helios feeds. As
-// seconds, values this large would be tens of thousands of years away.
+// As seconds, values this large would be tens of thousands of years away.
 const millisecondThreshold = 1e12
 
 // Time returns t as a time.Time in UTC. Values of 1e12 or more are read as

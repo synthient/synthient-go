@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/synthient/synthient-go"
@@ -29,6 +28,6 @@ func main() {
 	resetsIn := time.Duration(account.LookupQuota.ResetsIn) * time.Second
 	fmt.Printf("%s %s <%s>\n", account.FirstName, account.LastName, account.Email)
 	fmt.Println("organization:", account.Organization.Name)
-	fmt.Println("scopes:", strings.Join(account.Scopes, ", "))
+	fmt.Println("scopes:", account.Scopes)
 	fmt.Printf("credits: %d (resets in %s)\n", account.LookupQuota.Credits, resetsIn)
 }

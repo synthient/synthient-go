@@ -25,7 +25,7 @@ func TestStream(t *testing.T) {
 		}
 		w.Header().Set("Content-Type", "application/x-ndjson")
 		_, _ = io.WriteString(w, "\n"+
-			`{"ip":"203.0.113.10","provider":"luminati","type":"residential","timestamp":1714780800,"country_code":"US","asn":15169}`+"\n"+
+			`{"ip":"203.0.113.10","provider":"luminati","type":"RESIDENTIAL_PROXY","timestamp":1714780800,"country_code":"US","asn":15169}`+"\n"+
 			"\n  \n"+
 			`{"ip":"203.0.113.11","asn":4294967295}`+"\n")
 	})
@@ -39,7 +39,7 @@ func TestStream(t *testing.T) {
 		events = append(events, event)
 	}
 	want := []ProxyEvent{
-		{IP: "203.0.113.10", Provider: "luminati", Type: "residential", Timestamp: 1714780800, CountryCode: "US", ASN: 15169},
+		{IP: "203.0.113.10", Provider: "luminati", Type: ProxyTypeResidentialProxy, Timestamp: 1714780800, CountryCode: "US", ASN: 15169},
 		{IP: "203.0.113.11", ASN: 4294967295},
 	}
 	if !reflect.DeepEqual(events, want) {
@@ -47,29 +47,89 @@ func TestStream(t *testing.T) {
 	}
 }
 
-func TestStreamHeliosHTTPSDetails(t *testing.T) {
+func TestStreamHeliosEvents(t *testing.T) {
 	t.Parallel()
-	srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = io.WriteString(w,
-			`{"domain":"example.com","port":443,"protocol":"https","details":{"sni":"example.com"},"raw":null,"timestamp":1778200137487}`+"\n"+
-				`{"domain":"example.com","port":443,"details":"{\"server_name\":\"example.com\"}","raw":"FgMBAH8BAA=="}`+"\n")
-	})
-	c := newTestClient(t, srv)
+	newClient := func(t *testing.T, body string) *Client {
+		t.Helper()
+		srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = io.WriteString(w, body)
+		})
+		return newTestClient(t, srv)
+	}
+	meta := HeliosMeta{ProxyIP: "203.0.113.10", Server: "hp-eu-1", PoolID: "prod", Provider: "luminati"}
+	const metaJSON = `"meta":{"proxy_ip":"203.0.113.10","server":"hp-eu-1","pool_id":"prod","provider":"luminati"}`
 
-	var details []string
-	for event, err := range c.HeliosHTTPS.Stream(t.Context()) {
+	t.Run("https", func(t *testing.T) {
+		t.Parallel()
+		c := newClient(t, `{"timestamp":1778200137487,"tunnel_id":42,"domain":"example.com","port":443,"protocol":"https",`+metaJSON+`,`+
+			`"details":{"sni":"example.com","handshake_version":"TLS 1.2","cipher_suites":[{"code":4865,"name":"TLS_AES_128_GCM_SHA256"}],"extensions":[{"code":0,"name":"server_name","length":16}],"has_grease":true},"raw":null}`+"\n"+
+			`{"timestamp":1778200137488,"details":null,"raw":null}`+"\n")
+
+		events := streamEvents(t, c.HeliosHTTPS)
+		want := []HeliosHTTPSEvent{
+			{
+				Timestamp: 1778200137487,
+				TunnelID:  42,
+				Domain:    "example.com",
+				Port:      443,
+				Protocol:  "https",
+				Meta:      meta,
+				Details: &TLSClientHello{
+					SNI:              "example.com",
+					HandshakeVersion: "TLS 1.2",
+					CipherSuites:     []TLSCodeName{{Code: 4865, Name: "TLS_AES_128_GCM_SHA256"}},
+					Extensions:       []TLSExtension{{Code: 0, Name: "server_name", Length: 16}},
+					HasGREASE:        true,
+				},
+			},
+			{Timestamp: 1778200137488},
+		}
+		if !reflect.DeepEqual(events, want) {
+			t.Errorf("events = %+v, want %+v", events, want)
+		}
+		if !events[0].Timestamp.Time().Equal(time.UnixMilli(1778200137487)) {
+			t.Errorf("timestamp %d decoded to %v", events[0].Timestamp, events[0].Timestamp.Time())
+		}
+	})
+
+	t.Run("http", func(t *testing.T) {
+		t.Parallel()
+		c := newClient(t, `{"timestamp":1778200137487,"protocol":"http","details":{"method":"GET","uri":"/","version":"HTTP/1.1","headers":{"Host":"example.com"}},"raw":"R0VUIC8gSFRUUC8xLjENCkhvc3Q6IGV4YW1wbGUuY29tDQoNCg=="}`+"\n")
+
+		events := streamEvents(t, c.HeliosHTTP)
+		want := []HeliosHTTPEvent{{
+			Timestamp: 1778200137487,
+			Protocol:  "http",
+			Details:   HTTPRequestDetails{Method: "GET", URI: "/", Version: "HTTP/1.1", Headers: map[string]string{"Host": "example.com"}},
+			Raw:       []byte("GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"),
+		}}
+		if !reflect.DeepEqual(events, want) {
+			t.Errorf("events = %+v, want %+v", events, want)
+		}
+	})
+
+	t.Run("dns", func(t *testing.T) {
+		t.Parallel()
+		c := newClient(t, `{"timestamp":1714780800123,"tunnel_id":42,"domain":"api.ipify.org","port":443,"protocol":"dns",`+metaJSON+`}`+"\n")
+
+		events := streamEvents(t, c.HeliosDNS)
+		want := []HeliosDNSEvent{{Timestamp: 1714780800123, TunnelID: 42, Domain: "api.ipify.org", Port: 443, Protocol: "dns", Meta: meta}}
+		if !reflect.DeepEqual(events, want) {
+			t.Errorf("events = %+v, want %+v", events, want)
+		}
+	})
+}
+
+func streamEvents[T any](t *testing.T, feed *Feed[T]) []T {
+	t.Helper()
+	var events []T
+	for event, err := range feed.Stream(t.Context()) {
 		if err != nil {
 			t.Fatalf("Stream: %v", err)
 		}
-		details = append(details, string(event.Details))
-		if event.Timestamp != 0 && event.Timestamp.Time().Year() != 2026 {
-			t.Errorf("timestamp %d decoded to %v", event.Timestamp, event.Timestamp.Time())
-		}
+		events = append(events, event)
 	}
-	want := []string{`{"sni":"example.com"}`, `"{\"server_name\":\"example.com\"}"`}
-	if !reflect.DeepEqual(details, want) {
-		t.Errorf("details = %q, want %q", details, want)
-	}
+	return events
 }
 
 func TestStreamErrors(t *testing.T) {

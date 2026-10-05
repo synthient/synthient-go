@@ -37,7 +37,7 @@ func run(ctx context.Context, client *synthient.Client) error {
 			return err
 		}
 		fmt.Printf("%-16s %-6s %10d rows %12d bytes\n", export.ID, export.Kind, export.RowCount, export.SizeBytes)
-		if export.Kind == "daily" {
+		if export.Kind == synthient.ExportKindDaily {
 			daily = &export
 			break
 		}

@@ -40,7 +40,8 @@ type Client struct {
 	HeliosHTTP *Feed[HeliosHTTPEvent]
 	// HeliosHTTPS is the Helios honeypot TLS ClientHello capture feed.
 	HeliosHTTPS *Feed[HeliosHTTPSEvent]
-	// HeliosDNS is the Helios honeypot DNS query feed.
+	// HeliosDNS is the Helios honeypot tunnel destination feed. Despite its
+	// name, it does not carry DNS queries.
 	HeliosDNS *Feed[HeliosDNSEvent]
 	// HeliosADB is the Helios honeypot Android Debug Bridge command feed.
 	HeliosADB *Feed[HeliosADBEvent]

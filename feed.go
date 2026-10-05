@@ -15,17 +15,23 @@ import (
 // Feed is a Synthient data feed. Each feed has a real-time stream of events
 // of type T and hourly parquet exports that roll up into daily exports.
 // Access feeds through the fields of Client, such as Client.Proxies.
+//
+// An hourly export is available until its day's daily export is rolled up,
+// shortly after 00:30 UTC the next day. After that, requests for the hour
+// return a 400 *APIError. While a daily export is being rolled up, requests
+// for it return a 404 *APIError with RetryAfter set.
 type Feed[T any] struct {
 	client *Client
 	path   string
 }
 
-// ExportID identifies a parquet export: LatestExport for the most recent
-// hourly export, a UTC day as "YYYY-MM-DD", or a UTC hour as
-// "YYYY-MM-DD/HH". Export.ID values can be passed as they are.
+// ExportID identifies a parquet export: LatestExport, a UTC day as
+// "YYYY-MM-DD", or a UTC hour as "YYYY-MM-DD/H", where a zero-padded hour is
+// also accepted. Export.ID values can be passed as they are.
 type ExportID string
 
-// LatestExport identifies a feed's most recent hourly export.
+// LatestExport identifies a feed's freshest export: the newest hourly export
+// during the day, or the daily export once that day's hours are rolled up.
 const LatestExport ExportID = "latest"
 
 const hourlyLayout = "2006-01-02/15"
@@ -76,10 +82,11 @@ type ExportPage struct {
 
 // Export describes a parquet export of a feed.
 type Export struct {
-	// ID identifies the export for ExportMeta, Download, and DownloadURL.
+	// ID identifies the export for ExportMeta, Download, and DownloadURL. On
+	// the first page, the newest hourly export may have the ID LatestExport.
 	ID ExportID `json:"id"`
-	// Kind is "hourly" or "daily".
-	Kind string `json:"kind"`
+	// Kind is whether the export covers an hour or a day.
+	Kind ExportKind `json:"kind"`
 	// Date is the UTC day of the export as "YYYY-MM-DD".
 	Date string `json:"date"`
 	// Hour is the UTC hour of an hourly export, or nil for a daily export.
@@ -97,14 +104,23 @@ type Export struct {
 	DownloadPath string `json:"download_path"`
 }
 
+// ExportKind is whether an export covers an hour or a day.
+type ExportKind string
+
+// Export kinds.
+const (
+	ExportKindHourly ExportKind = "hourly"
+	ExportKindDaily  ExportKind = "daily"
+)
+
 // ExportMeta describes a parquet export without its contents.
 type ExportMeta struct {
 	// ID identifies the export.
 	ID ExportID `json:"id"`
 	// Stream is the feed's stream identifier.
 	Stream string `json:"stream"`
-	// Kind is "hourly" or "daily".
-	Kind string `json:"kind"`
+	// Kind is whether the export covers an hour or a day.
+	Kind ExportKind `json:"kind"`
 	// Format is the file format, "parquet".
 	Format string `json:"format"`
 	// Date is the start of the export's UTC day or hour.
@@ -133,9 +149,22 @@ type ParquetSchema struct {
 type ParquetColumn struct {
 	// Name is the column name.
 	Name string `json:"name"`
-	// Type is the column type, such as "string" or "int64".
-	Type string `json:"type"`
+	// Type is the column type.
+	Type ParquetType `json:"type"`
 }
+
+// ParquetType is the type of a parquet column. New values may be added.
+type ParquetType string
+
+// Parquet column types.
+const (
+	ParquetTypeString ParquetType = "string"
+	ParquetTypeInt64  ParquetType = "int64"
+	ParquetTypeUint32 ParquetType = "uint32"
+	ParquetTypeUint64 ParquetType = "uint64"
+	ParquetTypeBool   ParquetType = "bool"
+	ParquetTypeBytes  ParquetType = "bytes"
+)
 
 // ListExports returns one page of the feed's exports, newest first. params
 // may be nil. Use AllExports to iterate over every page.

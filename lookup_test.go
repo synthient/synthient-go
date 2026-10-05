@@ -33,7 +33,7 @@ const ipInfoJSON = `{
 		"risk_score": 12,
 		"categories": ["DATACENTER"],
 		"behavior": [],
-		"devices": [{"os": "LINUX", "version": "6.1", "last_seen": 1714780800}],
+		"devices": [{"os": "Linux", "version": "6.1", "last_seen": 1714780800}],
 		"providers": [{"provider": "CLOUDFLARE_WARP", "type": "VPN", "last_seen": 1714780800}]
 	}
 }`
@@ -45,7 +45,7 @@ func wantIPInfo() IPInfo {
 			ASN:    13335,
 			ISP:    "Cloudflare",
 			Domain: "cloudflare.com",
-			Type:   "DATACENTER",
+			Type:   NetworkTypeDatacenter,
 		},
 		Location: &Location{
 			City:      "Sydney",
@@ -60,7 +60,7 @@ func wantIPInfo() IPInfo {
 			RiskScore:  12,
 			Categories: []string{"DATACENTER"},
 			Behavior:   []string{},
-			Devices:    []Device{{OS: "LINUX", Version: "6.1", LastSeen: 1714780800}},
+			Devices:    []Device{{OS: OSLinux, Version: "6.1", LastSeen: 1714780800}},
 			Providers:  []Provider{{Name: "CLOUDFLARE_WARP", Type: "VPN", LastSeen: 1714780800}},
 		},
 	}
@@ -246,6 +246,9 @@ func TestLookupDomain(t *testing.T) {
 			if info.Domain != "example.com" || info.TopASN.ASN != 15169 || len(info.RecentEvents) != 1 {
 				t.Errorf("LookupDomain = %+v", info)
 			}
+			if info.Status != DomainStatusActive || info.ActivityStats.Cadence != CadenceBurstDriven || info.RecentEvents[0].SourceIP != "203.0.113.7" {
+				t.Errorf("status %q, cadence %q, source IP %q", info.Status, info.ActivityStats.Cadence, info.RecentEvents[0].SourceIP)
+			}
 			if info.TimeSeries[0].Date.Time().Unix() != 1777680000 {
 				t.Errorf("time series date = %d, want 1777680000", info.TimeSeries[0].Date)
 			}
@@ -274,7 +277,7 @@ func TestLookupDomainRejectsInvalidDomain(t *testing.T) {
 
 const domainInfoJSON = `{
 	"domain": "example.com",
-	"status": "ok",
+	"status": "active",
 	"stats": {"events_24h": 12, "total_events_30d": 340},
 	"unique_ips": {"value_24h": 5, "value_30d": 90, "sparkline_24h": [0, 1, 4]},
 	"time_series": [{"date": 1777680000, "events": 12, "unique_ips": 5}],
@@ -283,6 +286,6 @@ const domainInfoJSON = `{
 	"top_ports": [{"port": 443, "count": 11}],
 	"geo_distribution": [{"country_code": "US", "events": 10, "unique_ips": 4}],
 	"hour_dow_heatmap": [[0, 1], [2, 3]],
-	"activity_stats": {"cadence": "bursty", "median_per_hour": 1, "p95_per_hour": 4, "peak_hour": 14, "quiet_hour": 3},
-	"recent_events": [{"timestamp": 1777680300, "source_ip_masked": "203.0.113.x", "target_subdomain": "www", "country_code": "US", "port": 443}]
+	"activity_stats": {"cadence": "Activity is burst-driven with significant peaks.", "median_per_hour": 1, "p95_per_hour": 4, "peak_hour": 14, "quiet_hour": 3},
+	"recent_events": [{"timestamp": 1777680300, "source_ip_masked": "203.0.113.7", "target_subdomain": "www", "country_code": "US", "port": 443}]
 }`
