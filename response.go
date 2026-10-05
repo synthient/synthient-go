@@ -32,15 +32,15 @@ type RateLimit struct {
 }
 
 func parseRateLimit(h http.Header) *RateLimit {
-	limit, err := strconv.Atoi(h.Get("RateLimit-Limit"))
+	limit, err := strconv.Atoi(h.Get("Ratelimit-Limit"))
 	if err != nil {
 		return nil
 	}
-	remaining, err := strconv.Atoi(h.Get("RateLimit-Remaining"))
+	remaining, err := strconv.Atoi(h.Get("Ratelimit-Remaining"))
 	if err != nil {
 		return nil
 	}
-	reset, err := strconv.ParseInt(h.Get("RateLimit-Reset"), 10, 64)
+	reset, err := strconv.ParseInt(h.Get("Ratelimit-Reset"), 10, 64)
 	if err != nil {
 		return nil
 	}
