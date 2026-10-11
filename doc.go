@@ -38,7 +38,8 @@
 // # Retries
 //
 // Requests that cost no credits are retried on 500, 502, 503, and 504
-// responses, on transport errors, and on 429 responses that carry
+// responses, on transport errors other than TLS certificate failures and
+// HTTP responses to HTTPS requests, and on 429 responses that carry
 // Retry-After. Billed lookups (LookupIP, LookupIPs, and LookupDomain) are
 // retried only on 429 responses that carry Retry-After, which the rate
 // limiter returns before doing any work. A 429 without Retry-After means the

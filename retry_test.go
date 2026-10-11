@@ -353,6 +353,39 @@ func TestRetryTransportErrors(t *testing.T) {
 	}
 }
 
+func TestPermanentTransportErrorsAreNotRetried(t *testing.T) {
+	t.Parallel()
+	untrusted := httptest.NewTLSServer(http.NotFoundHandler())
+	t.Cleanup(untrusted.Close)
+	plain := newTestServer(t, http.NotFound)
+	tests := map[string]string{
+		"untrusted certificate": untrusted.URL,
+		"http server":           strings.Replace(plain.URL, "http:", "https:", 1),
+	}
+	for name, baseURL := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			c, err := NewClient(testAPIKey, WithBaseURL(baseURL+"/api/v4"))
+			if err != nil {
+				t.Fatalf("NewClient: %v", err)
+			}
+			waits := 0
+			c.wait = func(context.Context, time.Duration) error {
+				waits++
+				return nil
+			}
+
+			_, err = c.Account(t.Context())
+			if err == nil {
+				t.Fatal("Account succeeded")
+			}
+			if waits != 0 {
+				t.Errorf("retried %d times after %v", waits, err)
+			}
+		})
+	}
+}
+
 func TestBackoff(t *testing.T) {
 	t.Parallel()
 	for attempt := range 10 {

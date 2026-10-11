@@ -2,6 +2,8 @@ package synthient
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"math/rand/v2"
 	"net/http"
 	"strconv"
@@ -18,7 +20,8 @@ type retryPolicy int
 
 const (
 	// retryTransient retries rate limits, gateway and server errors, and
-	// transport failures. It is used for operations that cost no credits.
+	// transport failures other than TLS certificate errors and scheme
+	// mismatches. It is used for operations that cost no credits.
 	retryTransient retryPolicy = iota
 	// retryRateLimit retries only rate limits, which the API rejects before
 	// doing any work. It is used for billed lookups, where a retried server
@@ -49,7 +52,9 @@ func (c *Client) send(ctx context.Context, r request) (*http.Response, error) {
 
 		resp, err := c.attempt(ctx, r)
 		if err != nil {
-			if !canRetry || r.policy != retryTransient || ctx.Err() != nil {
+			var certErr *tls.CertificateVerificationError
+			permanent := errors.As(err, &certErr) || errors.Is(err, http.ErrSchemeMismatch)
+			if !canRetry || r.policy != retryTransient || permanent || ctx.Err() != nil {
 				return nil, err
 			}
 			err = c.wait(ctx, backoff(attempt))
