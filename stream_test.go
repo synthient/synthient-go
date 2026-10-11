@@ -61,7 +61,7 @@ func TestStreamHeliosEvents(t *testing.T) {
 
 	t.Run("https", func(t *testing.T) {
 		t.Parallel()
-		c := newClient(t, `{"timestamp":1778200137487,"tunnel_id":42,"domain":"example.com","port":443,"protocol":"https",`+metaJSON+`,`+
+		c := newClient(t, `{"timestamp":1778200137487,"tunnel_id":17257744507466107949,"domain":"example.com","port":443,"protocol":"https",`+metaJSON+`,`+
 			`"details":{"sni":"example.com","handshake_version":"TLS 1.2","cipher_suites":[{"code":4865,"name":"TLS_AES_128_GCM_SHA256"}],"extensions":[{"code":0,"name":"server_name","length":16}],"has_grease":true},"raw":null}`+"\n"+
 			`{"timestamp":1778200137488,"details":null,"raw":null}`+"\n")
 
@@ -69,7 +69,7 @@ func TestStreamHeliosEvents(t *testing.T) {
 		want := []HeliosHTTPSEvent{
 			{
 				Timestamp: 1778200137487,
-				TunnelID:  42,
+				TunnelID:  17257744507466107949,
 				Domain:    "example.com",
 				Port:      443,
 				Protocol:  "https",
@@ -110,10 +110,10 @@ func TestStreamHeliosEvents(t *testing.T) {
 
 	t.Run("dns", func(t *testing.T) {
 		t.Parallel()
-		c := newClient(t, `{"timestamp":1714780800123,"tunnel_id":42,"domain":"api.ipify.org","port":443,"protocol":"dns",`+metaJSON+`}`+"\n")
+		c := newClient(t, `{"timestamp":1714780800123,"tunnel_id":18446744073709551615,"domain":"api.ipify.org","port":443,"protocol":"dns",`+metaJSON+`}`+"\n")
 
 		events := streamEvents(t, c.HeliosDNS)
-		want := []HeliosDNSEvent{{Timestamp: 1714780800123, TunnelID: 42, Domain: "api.ipify.org", Port: 443, Protocol: "dns", Meta: meta}}
+		want := []HeliosDNSEvent{{Timestamp: 1714780800123, TunnelID: 18446744073709551615, Domain: "api.ipify.org", Port: 443, Protocol: "dns", Meta: meta}}
 		if !reflect.DeepEqual(events, want) {
 			t.Errorf("events = %+v, want %+v", events, want)
 		}

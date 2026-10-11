@@ -65,6 +65,15 @@ var schemaTypes = map[string]reflect.Type{
 	"ValidationProblemDetails": reflect.TypeFor[problem](),
 }
 
+// liveFormats corrects formats where the spec disagrees with the live API. The
+// spec says int64, but the Helios streams send tunnel IDs above the int64
+// maximum.
+var liveFormats = map[string]string{
+	"HoneypotDNSStreamEntry.tunnel_id":   "uint64",
+	"HoneypotHTTPSStreamEntry.tunnel_id": "uint64",
+	"HoneypotHTTPStreamEntry.tunnel_id":  "uint64",
+}
+
 type specSchema struct {
 	Ref            string                `json:"$ref"`
 	Type           string                `json:"type"`
@@ -129,6 +138,10 @@ func checkFields(t *testing.T, where string, schema specSchema, typ reflect.Type
 	fields := jsonFields(typ)
 	for _, name := range slices.Sorted(maps.Keys(schema.Properties)) {
 		prop := schema.Properties[name]
+		format, ok := liveFormats[where+"."+name]
+		if ok {
+			prop.Format = format
+		}
 		field, ok := fields[name]
 		if !ok {
 			t.Errorf("%s.%s has no field in %s", where, name, typ)
@@ -175,8 +188,11 @@ func compatible(schema specSchema, typ reflect.Type) bool {
 		}
 		return typ.Kind() == reflect.String || typ == reflect.TypeFor[netip.Addr]() || typ == reflect.TypeFor[time.Time]()
 	case "integer":
-		if schema.Format == "int64" {
+		switch schema.Format {
+		case "int64":
 			return typ.Kind() == reflect.Int64
+		case "uint64":
+			return typ.Kind() == reflect.Uint64
 		}
 		return slices.Contains([]reflect.Kind{reflect.Int, reflect.Int32, reflect.Int64}, typ.Kind())
 	case "number":

@@ -139,8 +139,9 @@ type HeliosMeta struct {
 type HeliosHTTPEvent struct {
 	// Timestamp is when the request was captured, in Unix milliseconds.
 	Timestamp Timestamp `json:"timestamp"`
-	// TunnelID identifies the proxy tunnel the request arrived through.
-	TunnelID int64 `json:"tunnel_id"`
+	// TunnelID identifies the proxy tunnel the request arrived through. Live
+	// values use the full uint64 range.
+	TunnelID uint64 `json:"tunnel_id"`
 	// Domain is the host the tunnel was opened to.
 	Domain string `json:"domain"`
 	// Port is the destination port.
@@ -171,8 +172,9 @@ type HTTPRequestDetails struct {
 type HeliosHTTPSEvent struct {
 	// Timestamp is when the handshake was captured, in Unix milliseconds.
 	Timestamp Timestamp `json:"timestamp"`
-	// TunnelID identifies the proxy tunnel the handshake arrived through.
-	TunnelID int64 `json:"tunnel_id"`
+	// TunnelID identifies the proxy tunnel the handshake arrived through. Live
+	// values use the full uint64 range.
+	TunnelID uint64 `json:"tunnel_id"`
 	// Domain is the host the tunnel was opened to.
 	Domain string `json:"domain"`
 	// Port is the destination port.
@@ -275,8 +277,9 @@ type TLSExtension struct {
 type HeliosDNSEvent struct {
 	// Timestamp is when the event was captured, in Unix milliseconds.
 	Timestamp Timestamp `json:"timestamp"`
-	// TunnelID identifies the proxy tunnel.
-	TunnelID int64 `json:"tunnel_id"`
+	// TunnelID identifies the proxy tunnel. Live values use the full uint64
+	// range.
+	TunnelID uint64 `json:"tunnel_id"`
 	// Domain is the host name or address literal the tunnel was opened to.
 	Domain string `json:"domain"`
 	// Port is the destination port.
