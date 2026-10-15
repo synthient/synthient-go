@@ -164,16 +164,19 @@ const (
 )
 
 // ListExports returns one page of the feed's exports, newest first. params
-// may be nil. Use AllExports to iterate over every page.
-func (f *Feed[T]) ListExports(ctx context.Context, params *ListExportsParams) (*ExportPage, error) {
+// is optional, and only the first is used. Use AllExports to iterate over
+// every page.
+func (f *Feed[T]) ListExports(ctx context.Context, params ...ListExportsParams) (*ExportPage, error) {
+	var p ListExportsParams
+	if len(params) > 0 {
+		p = params[0]
+	}
 	query := url.Values{}
-	if params != nil {
-		if params.Limit > 0 {
-			query.Set("limit", strconv.Itoa(params.Limit))
-		}
-		if params.Cursor != "" {
-			query.Set("cursor", params.Cursor)
-		}
+	if p.Limit > 0 {
+		query.Set("limit", strconv.Itoa(p.Limit))
+	}
+	if p.Cursor != "" {
+		query.Set("cursor", p.Cursor)
 	}
 
 	return doJSON[ExportPage](ctx, f.client, request{method: http.MethodGet, path: f.path + "/export", query: query})
@@ -182,21 +185,18 @@ func (f *Feed[T]) ListExports(ctx context.Context, params *ListExportsParams) (*
 // AllExports returns an iterator over the feed's exports, newest first. It
 // fetches pages lazily as iteration proceeds, and stops without fetching
 // more when the loop breaks. An error is yielded once and ends the
-// iteration. params may be nil and is not modified.
-func (f *Feed[T]) AllExports(
-	ctx context.Context,
-	params *ListExportsParams,
-) iter.Seq2[Export, error] {
+// iteration. params is optional, and only the first is used.
+func (f *Feed[T]) AllExports(ctx context.Context, params ...ListExportsParams) iter.Seq2[Export, error] {
 	var start ListExportsParams
-	if params != nil {
-		start = *params
+	if len(params) > 0 {
+		start = params[0]
 	}
 
 	return func(yield func(Export, error) bool) {
 		page := start
 		seen := map[string]bool{page.Cursor: true}
 		for {
-			result, err := f.ListExports(ctx, &page)
+			result, err := f.ListExports(ctx, page)
 			if err != nil {
 				yield(Export{}, err)
 				return

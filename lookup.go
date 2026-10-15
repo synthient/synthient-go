@@ -343,17 +343,18 @@ func (c *Client) LookupIPs(ctx context.Context, ips []netip.Addr) ([]IPInfo, err
 }
 
 // LookupDomain returns the honeypot traffic observed for a domain.
-// Internationalized names must be sent in Punycode. params may be nil. A
-// domain that has never been observed returns DomainStatusInactive and zero
-// counts rather than an error. Each lookup costs one credit.
-func (c *Client) LookupDomain(ctx context.Context, domain string, params *LookupDomainParams) (*DomainInfo, error) {
+// Internationalized names must be sent in Punycode. params is optional, and
+// only the first is used. A domain that has never been observed returns
+// DomainStatusInactive and zero counts rather than an error. Each lookup costs
+// one credit.
+func (c *Client) LookupDomain(ctx context.Context, domain string, params ...LookupDomainParams) (*DomainInfo, error) {
 	if domain == "" || domain == "." || domain == ".." {
 		return nil, fmt.Errorf("synthient: invalid domain %q", domain)
 	}
 
 	query := url.Values{}
-	if params != nil && params.Limit > 0 {
-		query.Set("limit", strconv.Itoa(params.Limit))
+	if len(params) > 0 && params[0].Limit > 0 {
+		query.Set("limit", strconv.Itoa(params[0].Limit))
 	}
 
 	return doJSON[DomainInfo](ctx, c, request{

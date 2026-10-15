@@ -226,12 +226,12 @@ func TestLookupDomain(t *testing.T) {
 	tests := []struct {
 		name    string
 		domain  string
-		params  *LookupDomainParams
+		params  []LookupDomainParams
 		wantURI string
 	}{
 		{name: "plain", domain: "example.com", wantURI: "/api/v4/lookup/domain/example.com"},
-		{name: "limit", domain: "example.com", params: &LookupDomainParams{Limit: 10}, wantURI: "/api/v4/lookup/domain/example.com?limit=10"},
-		{name: "zero limit", domain: "example.com", params: &LookupDomainParams{}, wantURI: "/api/v4/lookup/domain/example.com"},
+		{name: "limit", domain: "example.com", params: []LookupDomainParams{{Limit: 10}}, wantURI: "/api/v4/lookup/domain/example.com?limit=10"},
+		{name: "zero limit", domain: "example.com", params: []LookupDomainParams{{}}, wantURI: "/api/v4/lookup/domain/example.com"},
 		{name: "reserved characters", domain: "a/b?c", wantURI: "/api/v4/lookup/domain/a%2Fb%3Fc"},
 	}
 	for _, tt := range tests {
@@ -245,7 +245,7 @@ func TestLookupDomain(t *testing.T) {
 			})
 			c := newTestClient(t, srv)
 
-			info, err := c.LookupDomain(t.Context(), tt.domain, tt.params)
+			info, err := c.LookupDomain(t.Context(), tt.domain, tt.params...)
 			if err != nil {
 				t.Fatalf("LookupDomain: %v", err)
 			}
@@ -271,7 +271,7 @@ func TestLookupDomainRejectsInvalidDomain(t *testing.T) {
 	c := newTestClient(t, srv)
 
 	for _, domain := range []string{"", ".", ".."} {
-		_, err := c.LookupDomain(t.Context(), domain, nil)
+		_, err := c.LookupDomain(t.Context(), domain)
 		if err == nil {
 			t.Errorf("LookupDomain(%q) succeeded, want an error", domain)
 		}

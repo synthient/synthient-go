@@ -187,7 +187,7 @@ func TestAPIErrorOmitsSecrets(t *testing.T) {
 	})
 	c := newTestClient(t, srv)
 
-	_, err := c.LookupDomain(t.Context(), "private.example", nil)
+	_, err := c.LookupDomain(t.Context(), "private.example")
 	if err == nil {
 		t.Fatal("LookupDomain succeeded, want an error")
 	}

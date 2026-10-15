@@ -125,7 +125,7 @@ func TestListExports(t *testing.T) {
 	})
 	c := newTestClient(t, srv)
 
-	page, err := c.Proxies.ListExports(t.Context(), &ListExportsParams{Limit: 2, Cursor: "c1"})
+	page, err := c.Proxies.ListExports(t.Context(), ListExportsParams{Limit: 2, Cursor: "c1"})
 	if err != nil {
 		t.Fatalf("ListExports: %v", err)
 	}
@@ -157,7 +157,7 @@ func TestAllExports(t *testing.T) {
 		writeJSON(w, http.StatusOK, pages[r.URL.Query().Get("cursor")])
 	})
 	c := newTestClient(t, srv)
-	params := &ListExportsParams{Limit: 2}
+	params := ListExportsParams{Limit: 2}
 
 	var ids []string
 	for export, err := range c.Proxies.AllExports(t.Context(), params) {
@@ -187,7 +187,7 @@ func TestAllExportsStopsOnBreak(t *testing.T) {
 	})
 	c := newTestClient(t, srv)
 
-	for range c.Proxies.AllExports(t.Context(), nil) {
+	for range c.Proxies.AllExports(t.Context()) {
 		break
 	}
 	if requests.Load() != 1 {
@@ -230,7 +230,7 @@ func TestAllExportsErrors(t *testing.T) {
 
 			items := 0
 			var iterErr error
-			for _, err := range c.Proxies.AllExports(t.Context(), nil) {
+			for _, err := range c.Proxies.AllExports(t.Context()) {
 				if err != nil {
 					iterErr = err
 					break

@@ -49,7 +49,7 @@ func TestResponseHookSeesRetriesPagesAndDecodeFailures(t *testing.T) {
 		return nil
 	}
 	var iterErr error
-	for _, err := range c.Proxies.AllExports(ctx, nil) {
+	for _, err := range c.Proxies.AllExports(ctx) {
 		if err != nil {
 			iterErr = err
 		}

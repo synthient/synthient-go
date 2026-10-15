@@ -91,7 +91,7 @@ func ExampleClient_LookupDomain() {
 		log.Fatal(err)
 	}
 
-	domain, err := client.LookupDomain(context.Background(), "example.com", &synthient.LookupDomainParams{Limit: 10})
+	domain, err := client.LookupDomain(context.Background(), "example.com", synthient.LookupDomainParams{Limit: 10})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func ExampleFeed_AllExports() {
 		log.Fatal(err)
 	}
 
-	for export, err := range client.Proxies.AllExports(context.Background(), nil) {
+	for export, err := range client.Proxies.AllExports(context.Background()) {
 		if err != nil {
 			log.Fatal(err)
 		}

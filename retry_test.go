@@ -23,7 +23,7 @@ func TestBilledLookupsDoNotReplayOnReusedConnection(t *testing.T) {
 			return err
 		},
 		"domain": func(ctx context.Context, c *Client) error {
-			_, err := c.LookupDomain(ctx, "example.com", nil)
+			_, err := c.LookupDomain(ctx, "example.com")
 			return err
 		},
 		"batch": func(ctx context.Context, c *Client) error {

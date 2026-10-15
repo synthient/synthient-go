@@ -32,7 +32,7 @@ func main() {
 
 func run(ctx context.Context, client *synthient.Client) error {
 	var daily *synthient.Export
-	for export, err := range client.Proxies.AllExports(ctx, nil) {
+	for export, err := range client.Proxies.AllExports(ctx) {
 		if err != nil {
 			return err
 		}

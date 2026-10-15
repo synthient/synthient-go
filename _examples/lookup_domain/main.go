@@ -24,8 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	params := &synthient.LookupDomainParams{Limit: 5}
-	domain, err := client.LookupDomain(context.Background(), os.Args[1], params)
+	domain, err := client.LookupDomain(context.Background(), os.Args[1], synthient.LookupDomainParams{Limit: 5})
 	if err != nil {
 		log.Fatal(err)
 	}
