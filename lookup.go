@@ -286,10 +286,6 @@ type LookupDomainParams struct {
 
 const maxBatchSize = 1000
 
-type batchRequest struct {
-	IPs []string `json:"ips"`
-}
-
 type batchResponse struct {
 	Results []IPInfo `json:"results"`
 }
@@ -324,14 +320,12 @@ func (c *Client) LookupIPs(ctx context.Context, ips []netip.Addr) ([]IPInfo, err
 		return nil, fmt.Errorf("synthient: %d addresses exceed the batch limit of %d", len(ips), maxBatchSize)
 	}
 
-	addrs := make([]string, len(ips))
 	for i, ip := range ips {
 		if !ip.IsValid() {
 			return nil, fmt.Errorf("synthient: invalid IP address at index %d", i)
 		}
-		addrs[i] = ip.String()
 	}
-	body, err := json.Marshal(batchRequest{IPs: addrs})
+	body, err := json.Marshal(map[string][]netip.Addr{"ips": ips})
 	if err != nil {
 		return nil, fmt.Errorf("synthient: encode request: %w", err)
 	}

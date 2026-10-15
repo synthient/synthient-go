@@ -37,7 +37,6 @@ var schemaTypes = map[string]reflect.Type{
 	"HoneypotHTTPStreamEntry":  reflect.TypeFor[HeliosHTTPEvent](),
 	"HoneypotMeta":             reflect.TypeFor[HeliosMeta](),
 	"IntelligenceInfo":         reflect.TypeFor[Intelligence](),
-	"IpBatchRequest":           reflect.TypeFor[batchRequest](),
 	"IpBatchResponse":          reflect.TypeFor[batchResponse](),
 	"IpProvidersResponse":      reflect.TypeFor[IPInfo](),
 	"JA4TStreamEntry":          reflect.TypeFor[JA4TEvent](),
@@ -64,6 +63,10 @@ var schemaTypes = map[string]reflect.Type{
 	"UniqueIPsBlock":           reflect.TypeFor[UniqueIPs](),
 	"ValidationProblemDetails": reflect.TypeFor[problem](),
 }
+
+// unmodeled lists schemas the SDK encodes without a named type. LookupIPs
+// sends IpBatchRequest as a map, and TestLookupIPs checks its body.
+var unmodeled = []string{"IpBatchRequest"}
 
 // liveFormats corrects formats where the spec disagrees with the live API. The
 // spec says int64, but the Helios streams send tunnel IDs above the int64
@@ -118,6 +121,9 @@ func TestSpecSchemasAreModeled(t *testing.T) {
 	s := loadSpec(t)
 
 	for _, name := range slices.Sorted(maps.Keys(s.Components.Schemas)) {
+		if slices.Contains(unmodeled, name) {
+			continue
+		}
 		typ, ok := schemaTypes[name]
 		if !ok {
 			t.Errorf("schema %s has no Go type in schemaTypes", name)
@@ -125,10 +131,10 @@ func TestSpecSchemasAreModeled(t *testing.T) {
 		}
 		checkFields(t, name, s.Components.Schemas[name], typ)
 	}
-	for name := range schemaTypes {
+	for _, name := range slices.Concat(slices.Collect(maps.Keys(schemaTypes)), unmodeled) {
 		_, ok := s.Components.Schemas[name]
 		if !ok {
-			t.Errorf("schemaTypes maps %s, which is no longer in the spec", name)
+			t.Errorf("%s is listed in conformance_test.go but is no longer in the spec", name)
 		}
 	}
 }
