@@ -43,16 +43,7 @@ type APIError struct {
 // Error returns only the HTTP status code and its standard description.
 // Server-provided fields and underlying errors are excluded so it is safe to log.
 func (e *APIError) Error() string {
-	var b strings.Builder
-	b.WriteString("synthient: ")
-	b.WriteString(strconv.Itoa(e.StatusCode))
-	text := http.StatusText(e.StatusCode)
-	if text != "" {
-		b.WriteString(" ")
-		b.WriteString(text)
-	}
-
-	return b.String()
+	return strings.TrimSpace("synthient: " + strconv.Itoa(e.StatusCode) + " " + http.StatusText(e.StatusCode))
 }
 
 // Unwrap returns the response body read error, if any, preserving errors.Is
