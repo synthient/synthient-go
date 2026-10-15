@@ -46,7 +46,7 @@ func TestFetchAllServices(t *testing.T) {
 	t.Parallel()
 	addr, keys := startServer(t)
 
-	schema, err := Fetch(t.Context(), "test-key", &Options{Endpoint: addr, Plaintext: true})
+	schema, err := Fetch(t.Context(), "test-key", Options{Endpoint: addr, Plaintext: true})
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
@@ -69,19 +69,23 @@ func TestFetchOptions(t *testing.T) {
 	t.Parallel()
 	addr, keys := startServer(t)
 
-	schema, err := Fetch(t.Context(), "", &Options{Endpoint: "grpc://" + addr, Plaintext: true, IncludeReflection: true})
+	schema, err := Fetch(t.Context(), "", Options{
+		Endpoint:  "grpc://" + addr,
+		Plaintext: true,
+		Symbols:   []string{"grpc.reflection.v1.ServerReflection"},
+	})
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if !slices.Contains(schema.Symbols, "grpc.reflection.v1.ServerReflection") {
-		t.Errorf("Symbols = %v, want the reflection service included", schema.Symbols)
+	if !slices.Equal(schema.Symbols, []string{"grpc.reflection.v1.ServerReflection"}) {
+		t.Errorf("Symbols = %v, want the reflection service", schema.Symbols)
 	}
 	key := <-keys
 	if len(key) != 0 {
 		t.Errorf("x-api-key metadata = %v, want none for an empty key", key)
 	}
 
-	schema, err = Fetch(t.Context(), "test-key", &Options{
+	schema, err = Fetch(t.Context(), "test-key", Options{
 		Endpoint:  addr,
 		Plaintext: true,
 		Symbols:   []string{" grpc.health.v1.HealthCheckRequest ", "grpc.health.v1.HealthCheckRequest"},
@@ -98,7 +102,7 @@ func TestFetchUnknownSymbol(t *testing.T) {
 	t.Parallel()
 	addr, _ := startServer(t)
 
-	_, err := Fetch(t.Context(), "test-key", &Options{Endpoint: addr, Plaintext: true, Symbols: []string{"synthient.v1.Missing"}})
+	_, err := Fetch(t.Context(), "test-key", Options{Endpoint: addr, Plaintext: true, Symbols: []string{"synthient.v1.Missing"}})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("Fetch error = %v, want NotFound", err)
 	}
@@ -113,7 +117,7 @@ func TestFetchCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	_, err := Fetch(ctx, "test-key", &Options{Endpoint: addr, Plaintext: true})
+	_, err := Fetch(ctx, "test-key", Options{Endpoint: addr, Plaintext: true})
 	if status.Code(err) != codes.Canceled {
 		t.Errorf("Fetch error = %v, want Canceled", err)
 	}
@@ -135,15 +139,15 @@ func TestNormalizeEndpoint(t *testing.T) {
 		{raw: "::1", endpoint: "[::1]:443", host: "::1"},
 	}
 	for _, tt := range tests {
-		endpoint, host, err := NormalizeEndpoint(tt.raw)
+		endpoint, host, err := normalizeEndpoint(tt.raw)
 		if err != nil || endpoint != tt.endpoint || host != tt.host {
-			t.Errorf("NormalizeEndpoint(%q) = %q, %q, %v, want %q, %q", tt.raw, endpoint, host, err, tt.endpoint, tt.host)
+			t.Errorf("normalizeEndpoint(%q) = %q, %q, %v, want %q, %q", tt.raw, endpoint, host, err, tt.endpoint, tt.host)
 		}
 	}
 
-	_, _, err := NormalizeEndpoint("grpc://")
+	_, _, err := normalizeEndpoint("grpc://")
 	if err == nil {
-		t.Error("NormalizeEndpoint(grpc://) succeeded, want an error")
+		t.Error("normalizeEndpoint(grpc://) succeeded, want an error")
 	}
 }
 

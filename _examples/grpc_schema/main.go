@@ -25,7 +25,7 @@ func run() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	schema, err := grpcschema.Fetch(ctx, os.Getenv("SYNTHIENT_API_KEY"), nil)
+	schema, err := grpcschema.Fetch(ctx, os.Getenv("SYNTHIENT_API_KEY"))
 	if err != nil {
 		explanation := grpcschema.Explain(err)
 		if explanation != "" {

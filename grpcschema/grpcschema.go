@@ -37,11 +37,9 @@ type Options struct {
 	Endpoint string
 	// Plaintext disables TLS, for local development servers.
 	Plaintext bool
-	// IncludeReflection includes the reflection service itself when listing
-	// services.
-	IncludeReflection bool
 	// Symbols are fully qualified service or message names to resolve.
-	// Empty resolves every service the server lists.
+	// Empty resolves every service the server lists, except the reflection
+	// service itself.
 	Symbols []string
 }
 
@@ -57,20 +55,22 @@ type Schema struct {
 }
 
 // Fetch connects to a Synthient gRPC endpoint and uses server reflection to
-// fetch the protobuf files that define opts.Symbols, or every listed service
-// when opts.Symbols is empty, along with all of their imports. apiKey is
-// sent as x-api-key metadata when it is not empty. opts may be nil.
-func Fetch(ctx context.Context, apiKey string, opts *Options) (*Schema, error) {
-	if opts == nil {
-		opts = &Options{}
+// fetch the protobuf files that define Options.Symbols, or every listed
+// service when there are none, along with all of their imports. apiKey is
+// sent as x-api-key metadata when it is not empty. opts is optional, and only
+// the first is used.
+func Fetch(ctx context.Context, apiKey string, opts ...Options) (*Schema, error) {
+	var o Options
+	if len(opts) > 0 {
+		o = opts[0]
 	}
-	endpoint, host, err := NormalizeEndpoint(opts.Endpoint)
+	endpoint, host, err := normalizeEndpoint(o.Endpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	creds := credentials.NewTLS(&tls.Config{ServerName: host, MinVersion: tls.VersionTLS12})
-	if opts.Plaintext {
+	if o.Plaintext {
 		creds = insecure.NewCredentials()
 	}
 	conn, err := grpc.NewClient(endpoint,
@@ -97,9 +97,9 @@ func Fetch(ctx context.Context, apiKey string, opts *Options) (*Schema, error) {
 	}
 	r := &reflector{stream: stream, host: host}
 
-	symbols := cleanSymbols(opts.Symbols)
+	symbols := cleanSymbols(o.Symbols)
 	if len(symbols) == 0 {
-		symbols, err = r.listServices(opts.IncludeReflection)
+		symbols, err = r.listServices()
 		if err != nil {
 			return nil, err
 		}
@@ -110,13 +110,9 @@ func Fetch(ctx context.Context, apiKey string, opts *Options) (*Schema, error) {
 
 	files := map[string]*descriptorpb.FileDescriptorProto{}
 	for _, symbol := range symbols {
-		raw, err := r.files(&reflectionpb.ServerReflectionRequest{
+		err = r.addFiles(files, &reflectionpb.ServerReflectionRequest{
 			MessageRequest: &reflectionpb.ServerReflectionRequest_FileContainingSymbol{FileContainingSymbol: symbol},
 		})
-		if err != nil {
-			return nil, err
-		}
-		err = addFiles(files, raw)
 		if err != nil {
 			return nil, err
 		}
@@ -133,10 +129,10 @@ func Fetch(ctx context.Context, apiKey string, opts *Options) (*Schema, error) {
 	}, nil
 }
 
-// NormalizeEndpoint converts raw to host:port form and also returns the host
+// normalizeEndpoint converts raw to host:port form and also returns the host
 // name for TLS verification. It accepts host:port, a bare host (port 443 is
 // assumed), and grpc:// or https:// URLs. Empty raw uses DefaultEndpoint.
-func NormalizeEndpoint(raw string) (endpoint, host string, err error) {
+func normalizeEndpoint(raw string) (endpoint, host string, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		raw = DefaultEndpoint
@@ -208,7 +204,7 @@ func (r *reflector) do(req *reflectionpb.ServerReflectionRequest) (*reflectionpb
 	return resp, nil
 }
 
-func (r *reflector) listServices(includeReflection bool) ([]string, error) {
+func (r *reflector) listServices() ([]string, error) {
 	resp, err := r.do(&reflectionpb.ServerReflectionRequest{
 		MessageRequest: &reflectionpb.ServerReflectionRequest_ListServices{},
 	})
@@ -226,7 +222,7 @@ func (r *reflector) listServices(includeReflection bool) ([]string, error) {
 		if name == "" {
 			continue
 		}
-		if !includeReflection && strings.HasPrefix(name, "grpc.reflection.") {
+		if strings.HasPrefix(name, "grpc.reflection.") {
 			continue
 		}
 		services = append(services, name)
@@ -235,47 +231,18 @@ func (r *reflector) listServices(includeReflection bool) ([]string, error) {
 	return services, nil
 }
 
-func (r *reflector) files(req *reflectionpb.ServerReflectionRequest) ([][]byte, error) {
+func (r *reflector) addFiles(files map[string]*descriptorpb.FileDescriptorProto, req *reflectionpb.ServerReflectionRequest) error {
 	resp, err := r.do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	files := resp.GetFileDescriptorResponse()
-	if files == nil {
-		return nil, errors.New("grpcschema: reflection response has no file descriptors")
+	list := resp.GetFileDescriptorResponse()
+	if list == nil {
+		return errors.New("grpcschema: reflection response has no file descriptors")
 	}
-	return files.GetFileDescriptorProto(), nil
-}
-
-func (r *reflector) resolveDependencies(files map[string]*descriptorpb.FileDescriptorProto) error {
-	for {
-		missing := missingDependencies(files)
-		if len(missing) == 0 {
-			return nil
-		}
-		for _, name := range missing {
-			raw, err := r.files(&reflectionpb.ServerReflectionRequest{
-				MessageRequest: &reflectionpb.ServerReflectionRequest_FileByFilename{FileByFilename: name},
-			})
-			if err != nil {
-				return err
-			}
-			err = addFiles(files, raw)
-			if err != nil {
-				return err
-			}
-			_, ok := files[name]
-			if !ok {
-				return fmt.Errorf("grpcschema: reflection did not return dependency %s", name)
-			}
-		}
-	}
-}
-
-func addFiles(files map[string]*descriptorpb.FileDescriptorProto, raw [][]byte) error {
-	for _, data := range raw {
+	for _, data := range list.GetFileDescriptorProto() {
 		file := &descriptorpb.FileDescriptorProto{}
-		err := proto.Unmarshal(data, file)
+		err = proto.Unmarshal(data, file)
 		if err != nil {
 			return fmt.Errorf("grpcschema: decode file descriptor: %w", err)
 		}
@@ -289,6 +256,27 @@ func addFiles(files map[string]*descriptorpb.FileDescriptorProto, raw [][]byte) 
 		}
 	}
 	return nil
+}
+
+func (r *reflector) resolveDependencies(files map[string]*descriptorpb.FileDescriptorProto) error {
+	for {
+		missing := missingDependencies(files)
+		if len(missing) == 0 {
+			return nil
+		}
+		for _, name := range missing {
+			err := r.addFiles(files, &reflectionpb.ServerReflectionRequest{
+				MessageRequest: &reflectionpb.ServerReflectionRequest_FileByFilename{FileByFilename: name},
+			})
+			if err != nil {
+				return err
+			}
+			_, ok := files[name]
+			if !ok {
+				return fmt.Errorf("grpcschema: reflection did not return dependency %s", name)
+			}
+		}
+	}
 }
 
 func missingDependencies(files map[string]*descriptorpb.FileDescriptorProto) []string {
