@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-func TestExportIDPath(t *testing.T) {
+func TestExportPath(t *testing.T) {
 	t.Parallel()
 	valid := []struct {
-		id   ExportID
+		id   string
 		want string
 	}{
 		{id: LatestExport, want: "latest"},
@@ -23,22 +23,22 @@ func TestExportIDPath(t *testing.T) {
 		{id: "2026-05-03/23", want: "2026-05-03/23"},
 	}
 	for _, tt := range valid {
-		got, err := tt.id.path()
+		got, err := exportPath(tt.id)
 		if err != nil || got != tt.want {
-			t.Errorf("ExportID(%q).path() = %q, %v, want %q", tt.id, got, err, tt.want)
+			t.Errorf("exportPath(%q) = %q, %v, want %q", tt.id, got, err, tt.want)
 		}
 	}
 
-	invalid := []ExportID{"", "latest/3", "2026-5-3", "2026-02-30", "2026-05-03/24", "2026-05-03/", "../account/me", "2026-05-03/07/meta"}
+	invalid := []string{"", "latest/3", "2026-5-3", "2026-02-30", "2026-05-03/24", "2026-05-03/", "../account/me", "2026-05-03/07/meta"}
 	for _, id := range invalid {
-		_, err := id.path()
+		_, err := exportPath(id)
 		if err == nil {
-			t.Errorf("ExportID(%q).path() succeeded, want an error", id)
+			t.Errorf("exportPath(%q) succeeded, want an error", id)
 		}
 	}
 }
 
-func TestExportIDConstructors(t *testing.T) {
+func TestExportIDHelpers(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, 5, 3, 22, 30, 0, 0, time.FixedZone("EST", -5*60*60))
 	daily := DailyExport(at)
@@ -62,7 +62,7 @@ func TestFeedRoutes(t *testing.T) {
 
 	tests := []struct {
 		name string
-		meta func(context.Context, ExportID) (*ExportMeta, error)
+		meta func(context.Context, string) (*ExportMeta, error)
 		path string
 	}{
 		{name: "proxies", meta: c.Proxies.ExportMeta, path: "/api/v4/feeds/proxies"},
@@ -75,7 +75,7 @@ func TestFeedRoutes(t *testing.T) {
 		{name: "helios adb", meta: c.HeliosADB.ExportMeta, path: "/api/v4/feeds/helio/adb"},
 	}
 	for _, tt := range tests {
-		for id, suffix := range map[ExportID]string{LatestExport: "/export/latest/meta", "2026-05-03/07": "/export/2026-05-03/7/meta"} {
+		for id, suffix := range map[string]string{LatestExport: "/export/latest/meta", "2026-05-03/07": "/export/2026-05-03/7/meta"} {
 			_, err := tt.meta(t.Context(), id)
 			if err != nil {
 				t.Fatalf("%s ExportMeta(%q): %v", tt.name, id, err)
@@ -159,14 +159,14 @@ func TestAllExports(t *testing.T) {
 	c := newTestClient(t, srv)
 	params := &ListExportsParams{Limit: 2}
 
-	var ids []ExportID
+	var ids []string
 	for export, err := range c.Proxies.AllExports(t.Context(), params) {
 		if err != nil {
 			t.Fatalf("AllExports: %v", err)
 		}
 		ids = append(ids, export.ID)
 	}
-	want := []ExportID{"2026-05-07/21", "2026-05-07/20", "2026-05-06"}
+	want := []string{"2026-05-07/21", "2026-05-07/20", "2026-05-06"}
 	if !slices.Equal(ids, want) {
 		t.Errorf("AllExports IDs = %v, want %v", ids, want)
 	}

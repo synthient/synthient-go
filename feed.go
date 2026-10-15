@@ -16,6 +16,10 @@ import (
 // of type T and hourly parquet exports that roll up into daily exports.
 // Access feeds through the fields of Client, such as Client.Proxies.
 //
+// An export ID is LatestExport, a UTC day as "YYYY-MM-DD", or a UTC hour as
+// "YYYY-MM-DD/H", where a zero-padded hour is also accepted. Export.ID values
+// can be passed as they are.
+//
 // An hourly export is available until its day's daily export is rolled up,
 // shortly after 00:30 UTC the next day. After that, requests for the hour
 // return a 400 *APIError. While a daily export is being rolled up, requests
@@ -25,41 +29,36 @@ type Feed[T any] struct {
 	path   string
 }
 
-// ExportID identifies a parquet export: LatestExport, a UTC day as
-// "YYYY-MM-DD", or a UTC hour as "YYYY-MM-DD/H", where a zero-padded hour is
-// also accepted. Export.ID values can be passed as they are.
-type ExportID string
-
 // LatestExport identifies a feed's freshest export: the newest hourly export
 // during the day, or the daily export once that day's hours are rolled up.
-const LatestExport ExportID = "latest"
+const LatestExport = "latest"
 
 const hourlyLayout = "2006-01-02/15"
 
 // DailyExport returns the ID of the daily export for the UTC day containing t.
-func DailyExport(t time.Time) ExportID {
-	return ExportID(t.UTC().Format(time.DateOnly))
+func DailyExport(t time.Time) string {
+	return t.UTC().Format(time.DateOnly)
 }
 
 // HourlyExport returns the ID of the hourly export for the UTC hour
 // containing t.
-func HourlyExport(t time.Time) ExportID {
-	return ExportID(t.UTC().Format(hourlyLayout))
+func HourlyExport(t time.Time) string {
+	return t.UTC().Format(hourlyLayout)
 }
 
-func (id ExportID) path() (string, error) {
+func exportPath(id string) (string, error) {
 	if id == LatestExport {
-		return "latest", nil
+		return id, nil
 	}
-	day, err := time.Parse(time.DateOnly, string(id))
+	day, err := time.Parse(time.DateOnly, id)
 	if err == nil {
 		return day.Format(time.DateOnly), nil
 	}
-	hour, err := time.Parse(hourlyLayout, string(id))
+	hour, err := time.Parse(hourlyLayout, id)
 	if err == nil {
 		return hour.Format(time.DateOnly) + "/" + strconv.Itoa(hour.Hour()), nil
 	}
-	return "", fmt.Errorf("synthient: invalid export ID %q", string(id))
+	return "", fmt.Errorf("synthient: invalid export ID %q", id)
 }
 
 // ListExportsParams holds optional parameters for listing exports.
@@ -84,7 +83,7 @@ type ExportPage struct {
 type Export struct {
 	// ID identifies the export for ExportMeta, Download, and DownloadURL. On
 	// the first page, the newest hourly export may have the ID LatestExport.
-	ID ExportID `json:"id"`
+	ID string `json:"id"`
 	// Kind is whether the export covers an hour or a day.
 	Kind ExportKind `json:"kind"`
 	// Date is the UTC day of the export as "YYYY-MM-DD".
@@ -115,9 +114,7 @@ const (
 
 // ExportMeta describes a parquet export without its contents.
 type ExportMeta struct {
-	// ID identifies the export.
-	ID ExportID `json:"id"`
-	// Stream is the feed's stream identifier.
+	ID     string `json:"id"`
 	Stream string `json:"stream"`
 	// Kind is whether the export covers an hour or a day.
 	Kind ExportKind `json:"kind"`
@@ -224,8 +221,8 @@ func (f *Feed[T]) AllExports(
 
 // ExportMeta returns the checksum, size, row count, and parquet schema of an
 // export.
-func (f *Feed[T]) ExportMeta(ctx context.Context, id ExportID) (*ExportMeta, error) {
-	path, err := id.path()
+func (f *Feed[T]) ExportMeta(ctx context.Context, id string) (*ExportMeta, error) {
+	path, err := exportPath(id)
 	if err != nil {
 		return nil, err
 	}
@@ -235,8 +232,8 @@ func (f *Feed[T]) ExportMeta(ctx context.Context, id ExportID) (*ExportMeta, err
 // DownloadURL returns a presigned URL for an export's parquet file. The URL
 // is valid for 24 hours and grants access without an API key, so treat it as
 // a secret. It is useful for tools that read parquet over HTTPS directly.
-func (f *Feed[T]) DownloadURL(ctx context.Context, id ExportID) (*url.URL, error) {
-	path, err := id.path()
+func (f *Feed[T]) DownloadURL(ctx context.Context, id string) (*url.URL, error) {
+	path, err := exportPath(id)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +271,7 @@ func (f *Feed[T]) DownloadURL(ctx context.Context, id ExportID) (*url.URL, error
 // never to the storage host that serves the file, and errors never include
 // the presigned URL. A non-success response from either returns an
 // *APIError.
-func (f *Feed[T]) Download(ctx context.Context, id ExportID) (io.ReadCloser, error) {
+func (f *Feed[T]) Download(ctx context.Context, id string) (io.ReadCloser, error) {
 	location, err := f.DownloadURL(ctx, id)
 	if err != nil {
 		return nil, err
