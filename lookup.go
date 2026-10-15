@@ -17,8 +17,7 @@ type IPInfo struct {
 	// IP is the address that was looked up.
 	IP netip.Addr `json:"ip"`
 	// Network describes the network that announces the address.
-	Network *Network `json:"network,omitempty"`
-	// Location is the address's geolocation.
+	Network  *Network  `json:"network,omitempty"`
 	Location *Location `json:"location,omitempty"`
 	// Intelligence holds the risk score and the proxy, VPN, and device
 	// observations for the address.
@@ -28,16 +27,14 @@ type IPInfo struct {
 // Network describes the network that announces an address.
 type Network struct {
 	// ASN is the autonomous system number, or 0 if the address is not routed.
-	ASN int64 `json:"asn"`
-	// ISP is the name of the internet service provider.
+	ASN int64  `json:"asn"`
 	ISP string `json:"isp"`
 	// Org is the organization the address is registered to, or empty if
 	// unknown.
 	Org string `json:"org"`
 	// Domain is the network operator's domain, or empty if unknown.
-	Domain string `json:"domain"`
-	// Type is the network type.
-	Type NetworkType `json:"type"`
+	Domain string      `json:"domain"`
+	Type   NetworkType `json:"type"`
 	// AbuseEmail is the operator's abuse contact email, or empty if unknown.
 	AbuseEmail string `json:"abuse_email"`
 	// AbusePhone is the operator's abuse contact phone number, or empty if
@@ -67,16 +64,14 @@ type Location struct {
 	Country string `json:"country"`
 	// State is the state or region.
 	State string `json:"state"`
-	// City is the city.
-	City string `json:"city"`
+	City  string `json:"city"`
 	// Timezone is the IANA time zone name.
 	Timezone string `json:"timezone"`
 	// Latitude is the latitude in degrees.
 	Latitude float64 `json:"latitude"`
 	// Longitude is the longitude in degrees.
 	Longitude float64 `json:"longitude"`
-	// GeoHash is the geohash of the coordinates.
-	GeoHash string `json:"geo_hash"`
+	GeoHash   string  `json:"geo_hash"`
 }
 
 // Intelligence holds Synthient's assessment of an address.
@@ -101,18 +96,15 @@ type Provider struct {
 	// Name is the service tag, such as "BRIGHTDATA".
 	Name string `json:"provider"`
 	// Type is the service category.
-	Type string `json:"type"`
-	// LastSeen is when the service was last seen using the address.
+	Type     string    `json:"type"`
 	LastSeen Timestamp `json:"last_seen"`
 }
 
 // Device is a device type seen behind an address.
 type Device struct {
-	// OS is the operating system.
 	OS OS `json:"os"`
 	// Version is the operating system version.
-	Version string `json:"version"`
-	// LastSeen is when the device was last seen.
+	Version  string    `json:"version"`
 	LastSeen Timestamp `json:"last_seen"`
 }
 
@@ -176,17 +168,13 @@ const (
 
 // DomainStats holds aggregate event counts for a domain.
 type DomainStats struct {
-	// Events24h is the number of events in the last 24 hours.
-	Events24h int64 `json:"events_24h"`
-	// TotalEvents30d is the number of events in the last 30 days.
+	Events24h      int64 `json:"events_24h"`
 	TotalEvents30d int64 `json:"total_events_30d"`
 }
 
 // UniqueIPs counts the distinct source addresses seen for a domain.
 type UniqueIPs struct {
-	// Value24h is the count for the last 24 hours.
 	Value24h int64 `json:"value_24h"`
-	// Value30d is the count for the last 30 days.
 	Value30d int64 `json:"value_30d"`
 	// Sparkline24h holds hourly counts for the last 24 hours.
 	Sparkline24h []int64 `json:"sparkline_24h"`
@@ -195,24 +183,20 @@ type UniqueIPs struct {
 // TimeSeriesPoint holds the event counts for one day.
 type TimeSeriesPoint struct {
 	// Date is the start of the day.
-	Date Timestamp `json:"date"`
-	// Events is the number of events that day.
-	Events int64 `json:"events"`
+	Date   Timestamp `json:"date"`
+	Events int64     `json:"events"`
 	// UniqueIPs is the number of distinct source addresses that day.
 	UniqueIPs int64 `json:"unique_ips"`
 }
 
 // ASNCount is an autonomous system and its event count.
 type ASNCount struct {
-	// ASN is the autonomous system number.
-	ASN int64 `json:"asn"`
-	// Events is the number of events from the network.
+	ASN    int64 `json:"asn"`
 	Events int64 `json:"events"`
 }
 
 // SubdomainCount is a subdomain and its event count.
 type SubdomainCount struct {
-	// Subdomain is the targeted subdomain.
 	Subdomain string `json:"subdomain"`
 	// Count is the number of events that targeted it.
 	Count int64 `json:"count"`
@@ -220,7 +204,6 @@ type SubdomainCount struct {
 
 // PortCount is a port and its event count.
 type PortCount struct {
-	// Port is the targeted port.
 	Port int `json:"port"`
 	// Count is the number of events that targeted it.
 	Count int64 `json:"count"`
@@ -230,20 +213,16 @@ type PortCount struct {
 type CountryCount struct {
 	// CountryCode is the ISO 3166-1 alpha-2 country code.
 	CountryCode string `json:"country_code"`
-	// Events is the number of events from the country.
-	Events int64 `json:"events"`
-	// UniqueIPs is the number of distinct addresses from the country.
-	UniqueIPs int64 `json:"unique_ips"`
+	Events      int64  `json:"events"`
+	UniqueIPs   int64  `json:"unique_ips"`
 }
 
 // ActivityStats describes the hourly activity pattern of a domain.
 type ActivityStats struct {
 	// Cadence describes how events are spread over the last 30 days.
-	Cadence Cadence `json:"cadence"`
-	// MedianPerHour is the median number of events per hour.
-	MedianPerHour int64 `json:"median_per_hour"`
-	// P95PerHour is the 95th percentile of events per hour.
-	P95PerHour int64 `json:"p95_per_hour"`
+	Cadence       Cadence `json:"cadence"`
+	MedianPerHour int64   `json:"median_per_hour"`
+	P95PerHour    int64   `json:"p95_per_hour"`
 	// PeakHour is the busiest UTC hour of the day.
 	PeakHour int `json:"peak_hour"`
 	// QuietHour is the quietest UTC hour of the day.
@@ -264,17 +243,14 @@ const (
 
 // DomainEvent is a single honeypot event for a domain.
 type DomainEvent struct {
-	// Timestamp is when the event happened.
 	Timestamp Timestamp `json:"timestamp"`
 	// SourceIP is the full proxy exit address that carried the event. The API
 	// names the field source_ip_masked, but the address is not masked.
-	SourceIP string `json:"source_ip_masked"`
-	// TargetSubdomain is the subdomain that was targeted.
+	SourceIP        string `json:"source_ip_masked"`
 	TargetSubdomain string `json:"target_subdomain"`
 	// CountryCode is the source country.
 	CountryCode string `json:"country_code"`
-	// Port is the targeted port.
-	Port int `json:"port"`
+	Port        int    `json:"port"`
 }
 
 // LookupDomainParams holds optional parameters for LookupDomain.

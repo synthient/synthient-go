@@ -34,23 +34,19 @@ type ProxyEvent struct {
 	// IP is the proxy exit address.
 	IP string `json:"ip"`
 	// Provider is the proxy service tag.
-	Provider string `json:"provider"`
-	// Type is the proxy category.
-	Type ProxyType `json:"type"`
+	Provider string    `json:"provider"`
+	Type     ProxyType `json:"type"`
 	// CountryCode is the ISO 3166-1 alpha-2 country of the address.
 	CountryCode string `json:"country_code"`
-	// ASN is the autonomous system number of the address.
-	ASN int64 `json:"asn"`
+	ASN         int64  `json:"asn"`
 	// Timestamp is when the proxy was seen, in Unix seconds.
 	Timestamp Timestamp `json:"timestamp"`
 }
 
 // AnonymizerEvent is a VPN or anonymizer IP range from the Anonymizers feed.
 type AnonymizerEvent struct {
-	// RangeStart is the first address of the range.
 	RangeStart string `json:"range_start"`
-	// RangeEnd is the last address of the range.
-	RangeEnd string `json:"range_end"`
+	RangeEnd   string `json:"range_end"`
 	// Provider is the service tag.
 	Provider string `json:"provider"`
 	// Type is the service category, such as ProxyTypeCommercialVPN.
@@ -66,21 +62,16 @@ type AnonymizerEvent struct {
 // TorrentEvent is a torrent observed on the BitTorrent DHT or a tracker.
 type TorrentEvent struct {
 	// InfoHash is the hex-encoded SHA-1 info hash.
-	InfoHash string `json:"info_hash"`
-	// Name is the torrent name.
-	Name string `json:"name"`
-	// MagnetURI is the torrent's magnet link.
+	InfoHash  string `json:"info_hash"`
+	Name      string `json:"name"`
 	MagnetURI string `json:"magnet_uri"`
 	// TotalSize is the total size of the torrent's files in bytes.
 	TotalSize int64 `json:"total_size"`
 	// PieceLength is the piece size in bytes.
-	PieceLength int64 `json:"piece_length"`
-	// FileCount is the number of files in the torrent.
-	FileCount int `json:"file_count"`
-	// Files are the torrent's files.
-	Files []TorrentFile `json:"files"`
-	// Peers are the peers seen sharing the torrent.
-	Peers []TorrentPeer `json:"peers"`
+	PieceLength int64         `json:"piece_length"`
+	FileCount   int           `json:"file_count"`
+	Files       []TorrentFile `json:"files"`
+	Peers       []TorrentPeer `json:"peers"`
 	// Timestamp is when the torrent was seen, in Unix seconds.
 	Timestamp Timestamp `json:"timestamp"`
 }
@@ -95,10 +86,8 @@ type TorrentFile struct {
 
 // TorrentPeer is a peer seen sharing a torrent.
 type TorrentPeer struct {
-	// IP is the peer's address.
-	IP string `json:"ip"`
-	// Port is the peer's port.
-	Port int `json:"port"`
+	IP   string `json:"ip"`
+	Port int    `json:"port"`
 	// Source is where the peer was found, such as "DHT", "PEX", or "tracker".
 	Source string `json:"source"`
 	// Encrypted reports whether the peer supports encrypted connections.
@@ -108,8 +97,7 @@ type TorrentPeer struct {
 // JA4TEvent is a JA4T TCP fingerprint sighting.
 type JA4TEvent struct {
 	// IP is the address the fingerprint was seen from.
-	IP string `json:"ip"`
-	// JA4T is the JA4T fingerprint.
+	IP   string `json:"ip"`
 	JA4T string `json:"ja4t"`
 	// Provider is the service tag of the address.
 	Provider string `json:"provider"`
@@ -117,8 +105,7 @@ type JA4TEvent struct {
 	Type ProxyType `json:"type"`
 	// CountryCode is the ISO 3166-1 alpha-2 country of the address.
 	CountryCode string `json:"country_code"`
-	// ASN is the autonomous system number of the address.
-	ASN int64 `json:"asn"`
+	ASN         int64  `json:"asn"`
 	// Timestamp is when the fingerprint was seen, in Unix seconds.
 	Timestamp Timestamp `json:"timestamp"`
 }
@@ -152,19 +139,16 @@ type HeliosHTTPEvent struct {
 	Meta HeliosMeta `json:"meta"`
 	// Details is the parsed request.
 	Details HTTPRequestDetails `json:"details"`
-	// Raw is the raw request.
-	Raw []byte `json:"raw"`
+	Raw     []byte             `json:"raw"`
 }
 
 // HTTPRequestDetails is a parsed HTTP request.
 type HTTPRequestDetails struct {
-	// Method is the request method.
 	Method string `json:"method"`
 	// URI is the request target.
 	URI string `json:"uri"`
 	// Version is the HTTP version, such as "HTTP/1.1".
-	Version string `json:"version"`
-	// Headers are the request headers.
+	Version string            `json:"version"`
 	Headers map[string]string `json:"headers"`
 }
 
@@ -202,51 +186,35 @@ type TLSClientHello struct {
 	// SessionID is the hex-encoded session ID.
 	SessionID string `json:"session_id"`
 	// SessionIDLength is the length of the session ID in bytes.
-	SessionIDLength int `json:"session_id_length"`
-	// CipherSuites are the offered cipher suites.
-	CipherSuites []TLSCodeName `json:"cipher_suites"`
-	// CompressionMethods are the offered compression methods.
-	CompressionMethods []int `json:"compression_methods"`
+	SessionIDLength    int           `json:"session_id_length"`
+	CipherSuites       []TLSCodeName `json:"cipher_suites"`
+	CompressionMethods []int         `json:"compression_methods"`
 	// Extensions are the extensions in wire order.
 	Extensions []TLSExtension `json:"extensions"`
 	// SNI is the server_name extension value.
 	SNI string `json:"sni"`
 	// ALPN lists the offered application protocols.
-	ALPN []string `json:"alpn"`
-	// SupportedVersions are the offered TLS versions.
+	ALPN              []string `json:"alpn"`
 	SupportedVersions []string `json:"supported_versions"`
 	// SupportedGroups are the offered key exchange groups.
-	SupportedGroups []TLSCodeName `json:"supported_groups"`
-	// SignatureAlgorithms are the offered signature algorithms.
+	SupportedGroups     []TLSCodeName `json:"supported_groups"`
 	SignatureAlgorithms []TLSCodeName `json:"signature_algorithms"`
-	// ECPointFormats are the offered elliptic curve point formats.
-	ECPointFormats []string `json:"ec_point_formats"`
+	ECPointFormats      []string      `json:"ec_point_formats"`
 	// KeyShareGroups are the groups the client sent key shares for.
 	KeyShareGroups []string `json:"key_share_groups"`
 	// PSKKeyExchangeModes are the offered pre-shared key exchange modes.
 	PSKKeyExchangeModes []string `json:"psk_key_exchange_modes"`
 	// CompressCertificate lists the offered certificate compression algorithms.
 	CompressCertificate []string `json:"compress_certificate"`
-	// HasGREASE reports whether the ClientHello contains GREASE values.
-	HasGREASE bool `json:"has_grease"`
+	HasGREASE           bool     `json:"has_grease"`
 	// ApplicationSettings reports whether the client offered application
 	// settings (ALPS).
-	ApplicationSettings bool `json:"application_settings"`
-	// DelegatedCredentials reports whether the client offered delegated
-	// credentials.
-	DelegatedCredentials bool `json:"delegated_credentials"`
-	// EncryptThenMAC reports whether the client offered encrypt-then-MAC.
-	EncryptThenMAC bool `json:"encrypt_then_mac"`
-	// ExtendedMasterSecret reports whether the client offered the extended
-	// master secret.
-	ExtendedMasterSecret bool `json:"extended_master_secret"`
-	// PostHandshakeAuth reports whether the client offered post-handshake
-	// authentication.
-	PostHandshakeAuth bool `json:"post_handshake_auth"`
-	// RenegotiationInfo reports whether the client sent renegotiation info.
-	RenegotiationInfo bool `json:"renegotiation_info"`
-	// SignedCertificateTimestamps reports whether the client requested signed
-	// certificate timestamps.
+	ApplicationSettings         bool `json:"application_settings"`
+	DelegatedCredentials        bool `json:"delegated_credentials"`
+	EncryptThenMAC              bool `json:"encrypt_then_mac"`
+	ExtendedMasterSecret        bool `json:"extended_master_secret"`
+	PostHandshakeAuth           bool `json:"post_handshake_auth"`
+	RenegotiationInfo           bool `json:"renegotiation_info"`
 	SignedCertificateTimestamps bool `json:"signed_certificate_timestamps"`
 	// StatusRequest reports whether the client requested OCSP stapling.
 	StatusRequest bool `json:"status_request"`
@@ -255,7 +223,6 @@ type TLSClientHello struct {
 // TLSCodeName is a TLS registry code point and its name. GREASE values are
 // named "GREASE(0x....)".
 type TLSCodeName struct {
-	// Code is the code point.
 	Code int `json:"code"`
 	// Name is the code point's registered name.
 	Name string `json:"name"`

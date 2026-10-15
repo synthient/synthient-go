@@ -72,8 +72,7 @@ type ListExportsParams struct {
 // ExportPage is one page of a feed's exports, newest first.
 type ExportPage struct {
 	// Stream is the feed's stream identifier, such as "proxies".
-	Stream string `json:"stream"`
-	// Exports are the exports on this page.
+	Stream  string   `json:"stream"`
 	Exports []Export `json:"feeds"`
 	// NextCursor fetches the next page. It is empty on the last page.
 	NextCursor string `json:"next_cursor"`
@@ -89,14 +88,11 @@ type Export struct {
 	// Date is the UTC day of the export as "YYYY-MM-DD".
 	Date string `json:"date"`
 	// Hour is the UTC hour of an hourly export, or nil for a daily export.
-	Hour *int `json:"hour"`
-	// SizeBytes is the size of the parquet file in bytes.
+	Hour      *int  `json:"hour"`
 	SizeBytes int64 `json:"size_bytes"`
-	// RowCount is the number of rows in the parquet file.
-	RowCount int64 `json:"row_count"`
+	RowCount  int64 `json:"row_count"`
 	// Checksum is the hex-encoded SHA-256 of the parquet file.
-	Checksum string `json:"checksum"`
-	// CreatedAt is when the export was produced.
+	Checksum  string    `json:"checksum"`
 	CreatedAt Timestamp `json:"created_at"`
 	// DownloadPath is the API path of the export's download, including the
 	// version prefix.
@@ -123,14 +119,12 @@ type ExportMeta struct {
 	// Date is the start of the export's UTC day or hour.
 	Date Timestamp `json:"date"`
 	// Hour is the UTC hour of an hourly export, or nil for a daily export.
-	Hour *int `json:"hour"`
-	// Rows is the number of rows in the parquet file.
+	Hour *int  `json:"hour"`
 	Rows int64 `json:"rows"`
 	// Size is the size of the parquet file in bytes.
 	Size int64 `json:"size"`
 	// Checksum is the hex-encoded SHA-256 of the parquet file.
-	Checksum string `json:"checksum"`
-	// CreatedAt is when the export was produced.
+	Checksum  string    `json:"checksum"`
 	CreatedAt Timestamp `json:"created_at"`
 	// Schema lists the parquet columns.
 	Schema ParquetSchema `json:"schema"`
@@ -144,9 +138,7 @@ type ParquetSchema struct {
 
 // ParquetColumn is a column of a parquet export.
 type ParquetColumn struct {
-	// Name is the column name.
-	Name string `json:"name"`
-	// Type is the column type.
+	Name string      `json:"name"`
 	Type ParquetType `json:"type"`
 }
 

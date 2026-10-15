@@ -8,13 +8,9 @@ import (
 
 // Account describes the account that owns the API key.
 type Account struct {
-	// Email is the account holder's email address.
-	Email string `json:"email"`
-	// FirstName is the account holder's first name.
-	FirstName string `json:"first_name"`
-	// LastName is the account holder's last name.
-	LastName string `json:"last_name"`
-	// Organization is the organization the account belongs to.
+	Email        string       `json:"email"`
+	FirstName    string       `json:"first_name"`
+	LastName     string       `json:"last_name"`
 	Organization Organization `json:"organization"`
 	// Scopes are the permissions granted to the API key.
 	Scopes []Scope `json:"scopes"`
@@ -26,9 +22,7 @@ type Account struct {
 
 // Organization is the organization an account belongs to.
 type Organization struct {
-	// ID identifies the organization.
-	ID string `json:"id"`
-	// Name is the organization's name.
+	ID   string `json:"id"`
 	Name string `json:"name"`
 	// Relation is the account's role in the organization.
 	Relation Relation `json:"relation"`
@@ -89,8 +83,7 @@ type AccountAPIKey struct {
 	// ID identifies the key. It is not the secret key itself.
 	ID string `json:"id"`
 	// Name is the key's display name.
-	Name string `json:"name"`
-	// CreatedAt is when the key was created.
+	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
