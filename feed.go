@@ -179,16 +179,7 @@ func (f *Feed[T]) ListExports(ctx context.Context, params *ListExportsParams) (*
 		}
 	}
 
-	var page ExportPage
-	err := f.client.doJSON(
-		ctx,
-		request{method: http.MethodGet, path: f.path + "/export", query: query},
-		&page,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &page, nil
+	return doJSON[ExportPage](ctx, f.client, request{method: http.MethodGet, path: f.path + "/export", query: query})
 }
 
 // AllExports returns an iterator over the feed's exports, newest first. It
@@ -238,17 +229,7 @@ func (f *Feed[T]) ExportMeta(ctx context.Context, id ExportID) (*ExportMeta, err
 	if err != nil {
 		return nil, err
 	}
-
-	var meta ExportMeta
-	err = f.client.doJSON(
-		ctx,
-		request{method: http.MethodGet, path: f.path + "/export/" + path + "/meta"},
-		&meta,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &meta, nil
+	return doJSON[ExportMeta](ctx, f.client, request{method: http.MethodGet, path: f.path + "/export/" + path + "/meta"})
 }
 
 // DownloadURL returns a presigned URL for an export's parquet file. The URL

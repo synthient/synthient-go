@@ -97,12 +97,7 @@ type AccountAPIKey struct {
 // Account returns the account that owns the API key, including its scopes and
 // remaining lookup credits. It costs no credits.
 func (c *Client) Account(ctx context.Context) (*Account, error) {
-	var account Account
-	err := c.doJSON(ctx, request{method: http.MethodGet, path: "/account/me"}, &account)
-	if err != nil {
-		return nil, err
-	}
-	return &account, nil
+	return doJSON[Account](ctx, c, request{method: http.MethodGet, path: "/account/me"})
 }
 
 // Health returns nil if the API and its dependencies are healthy. An
@@ -110,5 +105,6 @@ func (c *Client) Account(ctx context.Context) (*Account, error) {
 // The API does not check the key, but a malformed key returns a 401
 // *APIError.
 func (c *Client) Health(ctx context.Context) error {
-	return c.doJSON(ctx, request{method: http.MethodGet, path: "/health", policy: retryRateLimit}, &struct{}{})
+	_, err := doJSON[struct{}](ctx, c, request{method: http.MethodGet, path: "/health", policy: retryRateLimit})
+	return err
 }

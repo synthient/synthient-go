@@ -234,28 +234,29 @@ func (c *Client) attempt(ctx context.Context, r request) (*http.Response, error)
 	return resp, err
 }
 
-func (c *Client) doJSON(ctx context.Context, r request, v any) error {
+func doJSON[T any](ctx context.Context, c *Client, r request) (*T, error) {
 	resp, err := c.send(ctx, r)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer closeBody(resp)
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return newAPIError(resp)
+		return nil, newAPIError(resp)
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
 	if err != nil {
-		return fmt.Errorf("synthient: read response: %w", err)
+		return nil, fmt.Errorf("synthient: read response: %w", err)
 	}
 	if len(body) > maxResponseSize {
-		return fmt.Errorf("synthient: response body exceeds %d bytes", maxResponseSize)
+		return nil, fmt.Errorf("synthient: response body exceeds %d bytes", maxResponseSize)
 	}
-	err = json.Unmarshal(body, v)
+	var v T
+	err = json.Unmarshal(body, &v)
 	if err != nil {
-		return fmt.Errorf("synthient: decode response: %w", err)
+		return nil, fmt.Errorf("synthient: decode response: %w", err)
 	}
-	return nil
+	return &v, nil
 }
 
 func closeBody(resp *http.Response) {

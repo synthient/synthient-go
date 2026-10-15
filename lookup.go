@@ -302,16 +302,11 @@ func (c *Client) LookupIP(ctx context.Context, ip netip.Addr) (*IPInfo, error) {
 		return nil, errors.New("synthient: invalid IP address")
 	}
 
-	var info IPInfo
-	err := c.doJSON(ctx, request{
+	return doJSON[IPInfo](ctx, c, request{
 		method: http.MethodGet,
 		path:   "/lookup/ip/" + url.PathEscape(ip.String()),
 		policy: retryRateLimit,
-	}, &info)
-	if err != nil {
-		return nil, err
-	}
-	return &info, nil
+	})
 }
 
 // LookupIPs looks up as many as 1000 addresses in one request. Private and
@@ -341,13 +336,12 @@ func (c *Client) LookupIPs(ctx context.Context, ips []netip.Addr) ([]IPInfo, err
 		return nil, fmt.Errorf("synthient: encode request: %w", err)
 	}
 
-	var out batchResponse
-	err = c.doJSON(ctx, request{
+	out, err := doJSON[batchResponse](ctx, c, request{
 		method: http.MethodPost,
 		path:   "/lookup/ips",
 		body:   body,
 		policy: retryRateLimit,
-	}, &out)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -368,15 +362,10 @@ func (c *Client) LookupDomain(ctx context.Context, domain string, params *Lookup
 		query.Set("limit", strconv.Itoa(params.Limit))
 	}
 
-	var info DomainInfo
-	err := c.doJSON(ctx, request{
+	return doJSON[DomainInfo](ctx, c, request{
 		method: http.MethodGet,
 		path:   "/lookup/domain/" + url.PathEscape(domain),
 		query:  query,
 		policy: retryRateLimit,
-	}, &info)
-	if err != nil {
-		return nil, err
-	}
-	return &info, nil
+	})
 }
