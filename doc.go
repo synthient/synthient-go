@@ -37,12 +37,14 @@
 //
 // # Retries
 //
-// Requests that cost no credits are retried on 500, 502, 503, and 504
+// Account and feed requests are retried on 500, 502, 503, and 504
 // responses, on transport errors other than TLS certificate failures and
 // HTTP responses to HTTPS requests, and on 429 responses that carry
-// Retry-After. Billed lookups (LookupIP, LookupIPs, and LookupDomain) are
-// retried only on 429 responses that carry Retry-After, which the rate
-// limiter returns before doing any work. A 429 without Retry-After means the
+// Retry-After. A failure while reading a response body is not retried, and
+// neither is the request Download sends to the storage host. Billed lookups
+// (LookupIP, LookupIPs, and LookupDomain) and Health are retried only on 429
+// responses that carry Retry-After, which the rate limiter returns before
+// doing any work. A 429 without Retry-After means the
 // key's monthly request budget is spent or it has too many open streams, so
 // it is returned without a retry. Billed requests have non-rewindable bodies
 // to prevent implicit transport replays; custom transports must honor that

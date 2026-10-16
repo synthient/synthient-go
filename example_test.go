@@ -1,6 +1,7 @@
 package synthient_test
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -112,13 +113,15 @@ func ExampleAPIError() {
 	if !ok {
 		log.Fatal(err)
 	}
-	switch apiErr.StatusCode {
-	case http.StatusPaymentRequired:
+	switch {
+	case apiErr.StatusCode == http.StatusPaymentRequired:
 		fmt.Println("out of lookup credits")
-	case http.StatusTooManyRequests:
+	case apiErr.StatusCode == http.StatusTooManyRequests && apiErr.RetryAfter > 0:
 		fmt.Println("rate limited, retry after", apiErr.RetryAfter)
+	case apiErr.StatusCode == http.StatusTooManyRequests:
+		fmt.Println("monthly request budget spent")
 	default:
-		fmt.Println("request", apiErr.RequestID, "failed:", apiErr.Detail)
+		fmt.Println("request", apiErr.RequestID, "failed:", cmp.Or(apiErr.Detail, apiErr.Title))
 	}
 }
 
@@ -133,14 +136,21 @@ func ExampleFeed_Stream() {
 	for ctx.Err() == nil {
 		for event, err := range client.Proxies.Stream(ctx) {
 			if err != nil {
+				apiErr, ok := errors.AsType[*synthient.APIError](err)
+				if ok && (apiErr.StatusCode == http.StatusUnauthorized || apiErr.StatusCode == http.StatusForbidden) {
+					log.Print(err)
+					return
+				}
 				log.Printf("proxy stream: %v", err)
+				// Pause after a failure so a failing stream doesn't
+				// reconnect in a tight loop.
+				time.Sleep(2 * time.Second)
 				break
 			}
 			fmt.Println(event.IP, event.Provider, event.Type)
 		}
-		// The server closes each stream after about 30 minutes. Pause before
-		// reconnecting so failures stay under the connection rate limit.
-		time.Sleep(2 * time.Second)
+		// The server closes each stream after at most 30 minutes, and the
+		// loop then reconnects at once.
 	}
 }
 
