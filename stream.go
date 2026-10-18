@@ -14,7 +14,7 @@ const maxEventSize = 16 << 20
 
 // Stream returns an iterator over the feed's real-time events. Each range
 // over the iterator opens a new connection, which the server closes cleanly
-// after about 30 minutes. A clean close ends the iteration without an error.
+// after up to 30 minutes. A clean close ends the iteration without an error.
 // Any other failure, including a non-success response (as an *APIError) or
 // a canceled ctx, is yielded once and ends the iteration. A 429 *APIError
 // without RetryAfter means the key already has too many open streams.
