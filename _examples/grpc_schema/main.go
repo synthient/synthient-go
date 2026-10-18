@@ -29,7 +29,7 @@ func run() error {
 	if err != nil {
 		explanation := grpcschema.Explain(err)
 		if explanation != "" {
-			return fmt.Errorf("%s: %w", explanation, err)
+			return fmt.Errorf("%s %w", explanation, err)
 		}
 		return err
 	}
