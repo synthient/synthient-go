@@ -245,7 +245,10 @@ func TestStreamBreakClosesConnection(t *testing.T) {
 	})
 	c := newTestClient(t, srv)
 
-	for range c.Proxies.Stream(t.Context()) {
+	for _, err := range c.Proxies.Stream(t.Context()) {
+		if err != nil {
+			t.Fatalf("Stream: %v", err)
+		}
 		break
 	}
 	select {

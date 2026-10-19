@@ -187,7 +187,10 @@ func TestAllExportsStopsOnBreak(t *testing.T) {
 	})
 	c := newTestClient(t, srv)
 
-	for range c.Proxies.AllExports(t.Context()) {
+	for _, err := range c.Proxies.AllExports(t.Context()) {
+		if err != nil {
+			t.Fatalf("AllExports: %v", err)
+		}
 		break
 	}
 	if requests.Load() != 1 {
