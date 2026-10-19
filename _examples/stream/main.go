@@ -44,8 +44,7 @@ func run(ctx context.Context, client *synthient.Client) error {
 					return err
 				}
 				log.Printf("stream: %v", err)
-				// Pause after a failure so repeated failures don't reconnect in a
-				// tight loop.
+				// Avoid reconnecting in a tight loop.
 				select {
 				case <-ctx.Done():
 				case <-time.After(2 * time.Second):
@@ -55,8 +54,7 @@ func run(ctx context.Context, client *synthient.Client) error {
 			at := event.Timestamp.Time().Format(time.RFC3339)
 			fmt.Println(at, event.IP, event.Provider, event.Type, event.CountryCode)
 		}
-		// The server closes each stream after at most 30 minutes, and the loop
-		// then reconnects at once.
+		// Reconnect after the server closes the stream.
 	}
 	return nil
 }

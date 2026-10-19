@@ -282,12 +282,12 @@ func (c *Client) LookupIP(ctx context.Context, ip netip.Addr) (*IPInfo, error) {
 }
 
 // LookupIPs looks up as many as 1000 addresses in one request. Private and
-// reserved addresses are skipped and duplicates collapse into one result, so
-// there can be fewer results than addresses. Match results by IP, which the
-// API canonicalizes, rather than by index. A batch with no address the API
-// can look up returns a 422 *APIError. The API bills ceil(n*0.9) credits for
-// the n distinct addresses it looks up, and bills nothing if the account
-// cannot cover the whole batch.
+// reserved addresses are skipped and duplicates collapse, so there can be
+// fewer results than addresses. Match results by IP, which the API
+// canonicalizes, not by index. A batch with no address the API can look up
+// returns a 422 *APIError. The API bills ceil(n*0.9) credits for the n
+// distinct addresses it looks up, and bills nothing if the account cannot
+// cover the whole batch.
 func (c *Client) LookupIPs(ctx context.Context, ips []netip.Addr) ([]IPInfo, error) {
 	if len(ips) == 0 {
 		return nil, nil

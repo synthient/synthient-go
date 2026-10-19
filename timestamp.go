@@ -2,9 +2,8 @@ package synthient
 
 import "time"
 
-// Timestamp is a Unix time as encoded by the API. It is in seconds, except on
-// anonymizer and Helios HTTP, HTTPS, and DNS stream events, where it is in
-// milliseconds. Time converts either.
+// Timestamp is a Unix time as the API encodes it, in seconds or, on some
+// stream events, milliseconds. Time converts either.
 type Timestamp int64
 
 // As seconds, values this large would be tens of thousands of years away.

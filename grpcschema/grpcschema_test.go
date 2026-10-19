@@ -18,8 +18,7 @@ import (
 )
 
 // startServer starts a loopback gRPC server with reflection and the health
-// service. It returns the server address and a channel that receives the
-// x-api-key metadata of each reflection stream.
+// service. keys receives the x-api-key metadata of each reflection stream.
 func startServer(t *testing.T) (addr string, keys <-chan []string) {
 	t.Helper()
 	var config net.ListenConfig

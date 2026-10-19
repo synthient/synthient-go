@@ -93,10 +93,9 @@ func (c *Client) Account(ctx context.Context) (*Account, error) {
 	return doJSON[Account](ctx, c, request{method: http.MethodGet, path: "/account/me"})
 }
 
-// Health returns nil if the API and its dependencies are healthy. An
-// unhealthy API returns an *APIError with status 503. It costs no credits.
-// The API does not check the key, but a malformed key returns a 401
-// *APIError.
+// Health returns nil if the API and its dependencies are healthy, or a 503
+// *APIError if not. It costs no credits and does not check the key, though a
+// malformed key returns a 401 *APIError.
 func (c *Client) Health(ctx context.Context) error {
 	_, err := doJSON[struct{}](ctx, c, request{method: http.MethodGet, path: "/health", policy: retryRateLimit})
 	return err

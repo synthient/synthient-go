@@ -49,16 +49,14 @@ type Schema struct {
 	Endpoint string
 	// Symbols are the service or message names that were resolved.
 	Symbols []string
-	// DescriptorSet holds the resolved files in dependency order, each file
-	// after the files it imports.
+	// DescriptorSet holds the resolved files, each after the files it imports.
 	DescriptorSet *descriptorpb.FileDescriptorSet
 }
 
-// Fetch connects to a Synthient gRPC endpoint and uses server reflection to
-// fetch the protobuf files that define Options.Symbols, or every listed
-// service when there are none, along with all of their imports. apiKey is
-// sent as x-api-key metadata when it is not empty. opts is optional, and only
-// the first is used.
+// Fetch uses server reflection to fetch the protobuf files that define
+// Options.Symbols, along with all of their imports. apiKey is sent as
+// x-api-key metadata when it is not empty. opts is optional, and only the
+// first is used.
 func Fetch(ctx context.Context, apiKey string, opts ...Options) (*Schema, error) {
 	var o Options
 	if len(opts) > 0 {
@@ -129,9 +127,8 @@ func Fetch(ctx context.Context, apiKey string, opts ...Options) (*Schema, error)
 	}, nil
 }
 
-// normalizeEndpoint converts raw to host:port form and also returns the host
-// name for TLS verification. It accepts host:port, a bare host (port 443 is
-// assumed), and grpc:// or https:// URLs. Empty raw uses DefaultEndpoint.
+// normalizeEndpoint returns raw as host:port and the host name for TLS
+// verification.
 func normalizeEndpoint(raw string) (endpoint, host string, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

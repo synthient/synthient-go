@@ -19,20 +19,16 @@ const (
 type retryPolicy int
 
 const (
-	// retryTransient retries rate limits, gateway and server errors, and
-	// transport failures other than TLS certificate errors and scheme
-	// mismatches. It is used for operations that cost no credits.
+	// retryTransient is for operations that cost no credits.
 	retryTransient retryPolicy = iota
-	// retryRateLimit retries only rate limits, which the API rejects before
-	// doing any work. It is used for billed lookups, where a retried server
-	// error could be charged twice.
+	// retryRateLimit retries only rate limits. It is for billed requests,
+	// where a retried server error could be charged twice.
 	retryRateLimit
 )
 
 func (p retryPolicy) retries(resp *http.Response) bool {
 	if resp.StatusCode == http.StatusTooManyRequests {
-		// Only the rate limiter sets Retry-After. Without it, the key's monthly
-		// budget is spent or it has too many open streams.
+		// Only the rate limiter sets Retry-After. Other 429s are not transient.
 		return resp.Header.Get("Retry-After") != ""
 	}
 	if p != retryTransient {

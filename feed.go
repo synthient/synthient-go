@@ -12,9 +12,9 @@ import (
 	"time"
 )
 
-// Feed is a Synthient data feed. Each feed has a real-time stream of events
-// of type T and hourly parquet exports that roll up into daily exports.
-// Access feeds through the fields of Client, such as Client.Proxies.
+// Feed is a Synthient data feed: a real-time stream of events of type T and
+// hourly parquet exports that roll up into daily exports. Access feeds
+// through the fields of Client, such as Client.Proxies.
 //
 // An export ID is LatestExport, a UTC day as "YYYY-MM-DD", or a UTC hour as
 // "YYYY-MM-DD/H", where a zero-padded hour is also accepted. Export.ID values
@@ -175,9 +175,9 @@ func (f *Feed[T]) ListExports(ctx context.Context, params ...ListExportsParams) 
 }
 
 // AllExports returns an iterator over the feed's exports, newest first. It
-// fetches pages lazily as iteration proceeds, and stops without fetching
-// more when the loop breaks. An error is yielded once and ends the
-// iteration. params is optional, and only the first is used.
+// fetches pages lazily and stops fetching when the loop breaks. An error is
+// yielded once and ends the iteration. params is optional, and only the
+// first is used.
 func (f *Feed[T]) AllExports(ctx context.Context, params ...ListExportsParams) iter.Seq2[Export, error] {
 	var start ListExportsParams
 	if len(params) > 0 {
@@ -223,7 +223,7 @@ func (f *Feed[T]) ExportMeta(ctx context.Context, id string) (*ExportMeta, error
 
 // DownloadURL returns a presigned URL for an export's parquet file. The URL
 // is valid for 24 hours and grants access without an API key, so treat it as
-// a secret. It is useful for tools that read parquet over HTTPS directly.
+// a secret.
 func (f *Feed[T]) DownloadURL(ctx context.Context, id string) (*url.URL, error) {
 	path, err := exportPath(id)
 	if err != nil {
@@ -259,10 +259,9 @@ func (f *Feed[T]) DownloadURL(ctx context.Context, id string) (*url.URL, error) 
 }
 
 // Download returns the contents of an export's parquet file. The caller must
-// close the returned reader. The API key is sent only to the Synthient API,
-// never to the storage host that serves the file, and errors never include
-// the presigned URL. A non-success response from either returns an
-// *APIError.
+// close the returned reader. The API key is never sent to the storage host
+// that serves the file, and errors never include the presigned URL. A
+// non-success response from either host returns an *APIError.
 func (f *Feed[T]) Download(ctx context.Context, id string) (io.ReadCloser, error) {
 	location, err := f.DownloadURL(ctx, id)
 	if err != nil {

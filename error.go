@@ -11,9 +11,8 @@ import (
 )
 
 // APIError is returned when a request fails with a non-success HTTP status.
-// Title, Detail, Errors, and RequestID contain untrusted server data and may
-// include sensitive information. Inspect them explicitly when needed.
-// Use errors.AsType to inspect it:
+// Title, Detail, Errors, and RequestID hold untrusted server data that may be
+// sensitive. Use errors.AsType to inspect it:
 //
 //	apiErr, ok := errors.AsType[*synthient.APIError](err)
 //	if ok && apiErr.StatusCode == http.StatusTooManyRequests {
@@ -40,14 +39,14 @@ type APIError struct {
 	cause      error
 }
 
-// Error returns only the HTTP status code and its standard description.
-// Server-provided fields and underlying errors are excluded so it is safe to log.
+// Error returns only the HTTP status code and its standard text, so it is
+// safe to log.
 func (e *APIError) Error() string {
 	return strings.TrimSpace("synthient: " + strconv.Itoa(e.StatusCode) + " " + http.StatusText(e.StatusCode))
 }
 
-// Unwrap returns the response body read error, if any, preserving errors.Is
-// checks for cancellation and deadlines while retaining the HTTP status.
+// Unwrap returns the error from reading the response body, if any, so
+// errors.Is can detect cancellation and deadlines.
 func (e *APIError) Unwrap() error {
 	return e.cause
 }

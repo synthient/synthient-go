@@ -13,15 +13,11 @@ import (
 const maxEventSize = 16 << 20
 
 // Stream returns an iterator over the feed's real-time events. Each range
-// over the iterator opens a new connection, which the server closes cleanly
-// after up to 30 minutes. A clean close ends the iteration without an error.
-// Any other failure, including a non-success response (as an *APIError) or
-// a canceled ctx, is yielded once and ends the iteration. A 429 *APIError
-// without RetryAfter means the key already has too many open streams.
-// Breaking out of the loop closes the connection.
-//
-// The API has no resume cursor, so events sent between connections are
-// missed. Loop over Stream again to reconnect.
+// opens a new connection, which the server closes after up to 30 minutes;
+// that close ends the iteration without an error. Any other failure is
+// yielded once and ends the iteration. Breaking out of the loop closes the
+// connection. Events sent between connections are missed, so range again
+// to reconnect.
 func (f *Feed[T]) Stream(ctx context.Context) iter.Seq2[T, error] {
 	return func(yield func(T, error) bool) {
 		var zero T

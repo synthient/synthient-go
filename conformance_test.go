@@ -68,9 +68,8 @@ var schemaTypes = map[string]reflect.Type{
 // sends IpBatchRequest as a map, and TestLookupIPs checks its body.
 var unmodeled = []string{"IpBatchRequest"}
 
-// liveFormats corrects formats where the spec disagrees with the live API. The
-// spec says int64, but the Helios streams send tunnel IDs above the int64
-// maximum.
+// liveFormats overrides spec formats that disagree with the live API. Helios
+// streams send tunnel IDs above the spec's int64 maximum.
 var liveFormats = map[string]string{
 	"HoneypotDNSStreamEntry.tunnel_id":   "uint64",
 	"HoneypotHTTPSStreamEntry.tunnel_id": "uint64",

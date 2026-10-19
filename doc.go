@@ -15,9 +15,6 @@
 //		fmt.Println(info.Intelligence.RiskScore)
 //	}
 //
-// IPInfo.Network, IPInfo.Location, and IPInfo.Intelligence are nil when the
-// API has no data for that section. Check presence before reading their fields.
-//
 // # Errors
 //
 // A request that fails with a non-success HTTP status returns an *APIError
@@ -29,28 +26,23 @@
 //		log.Print("out of lookup credits")
 //	}
 //
-// APIError.Error contains only the HTTP status. Server-provided details are
-// available in its fields and can contain sensitive data. Body read failures
-// preserve errors.Is checks for context cancellation and deadlines.
-// WithResponseHook exposes request IDs and rate limits on both successful and
-// failed API responses, including each retry and page.
+// WithResponseHook exposes request IDs and rate limits on every API
+// response, including retries and pages.
 //
 // # Retries
 //
 // Account and feed requests are retried on 500, 502, 503, and 504
 // responses, on transport errors other than TLS certificate failures and
 // HTTP responses to HTTPS requests, and on 429 responses that carry
-// Retry-After. A failure while reading a response body is not retried, and
-// neither is the request Download sends to the storage host. Billed lookups
-// (LookupIP, LookupIPs, and LookupDomain) and Health are retried only on 429
-// responses that carry Retry-After, which the rate limiter returns before
-// doing any work. A 429 without Retry-After means the
-// key's monthly request budget is spent or it has too many open streams, so
-// it is returned without a retry. Billed requests have non-rewindable bodies
-// to prevent implicit transport replays; custom transports must honor that
-// restriction.
-// Retries back off exponentially with jitter, honor Retry-After, and stop
-// when the context is done. Set the retry count with WithMaxRetries.
+// Retry-After. Billed lookups (LookupIP, LookupIPs, and LookupDomain) and
+// Health are retried only on 429 responses with Retry-After, which the rate
+// limiter returns before doing any work. A 429 without Retry-After means the
+// key's monthly request budget is spent or it has too many open streams.
+// Response body read failures and the storage request Download sends are
+// never retried. Billed requests use non-rewindable bodies so the transport
+// cannot replay them. Retries back off exponentially with jitter, honor
+// Retry-After, and stop when the context is done. Set the retry count with
+// WithMaxRetries.
 //
 // # Feeds
 //
@@ -63,10 +55,6 @@
 //		}
 //		fmt.Println(event.IP, event.Provider)
 //	}
-//
-// Download fetches an export's parquet file. The API key is sent only to the
-// Synthient API; the file itself comes from a presigned storage URL that is
-// requested without it.
 //
 // # Timeouts
 //

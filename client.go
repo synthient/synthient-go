@@ -40,8 +40,7 @@ type Client struct {
 	HeliosHTTP *Feed[HeliosHTTPEvent]
 	// HeliosHTTPS is the Helios honeypot TLS ClientHello capture feed.
 	HeliosHTTPS *Feed[HeliosHTTPSEvent]
-	// HeliosDNS is the Helios honeypot tunnel destination feed. Despite its
-	// name, it does not carry DNS queries.
+	// HeliosDNS is the Helios honeypot tunnel destination feed.
 	HeliosDNS *Feed[HeliosDNSEvent]
 	// HeliosADB is the Helios honeypot Android Debug Bridge command feed.
 	HeliosADB *Feed[HeliosADBEvent]
@@ -77,9 +76,9 @@ func WithBaseURL(u string) Option {
 
 // WithHTTPClient sets the HTTP client used to send requests. The client is
 // copied and never modified. It should not set http.Client.Timeout, which
-// would also cut off streams and downloads; use context deadlines instead.
-// The default client bounds the wait for response headers to one minute.
-// Custom transports must not replay requests whose bodies cannot be rewound.
+// would cut off streams and downloads. The default client waits at most one
+// minute for response headers. Custom transports must not replay requests
+// whose bodies cannot be rewound.
 func WithHTTPClient(hc *http.Client) Option {
 	return func(c *config) {
 		c.httpClient = hc
@@ -206,8 +205,8 @@ func (c *Client) attempt(ctx context.Context, r request) (*http.Response, error)
 		return nil, fmt.Errorf("synthient: build request: %w", err)
 	}
 	if r.policy == retryRateLimit {
-		// A non-rewindable body prevents net/http from replaying billed GETs
-		// on a reused connection. An empty GET still sends zero body bytes.
+		// A non-rewindable body stops net/http from replaying billed GETs on a
+		// reused connection.
 		req.Body = io.NopCloser(bytes.NewReader(r.body))
 		req.GetBody = nil
 	}

@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// storageURL returns a URL for srv on a different host name than the API
-// test server, so the HTTP client treats it as a separate origin.
+// storageURL returns srv's URL under a different host name, so the client
+// treats it as a separate origin.
 func storageURL(srv *httptest.Server, path string) string {
 	return strings.Replace(srv.URL, "127.0.0.1", "localhost", 1) + path + "?X-Amz-Signature=secret-signature"
 }

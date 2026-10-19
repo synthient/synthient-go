@@ -142,15 +142,13 @@ func ExampleFeed_Stream() {
 					return
 				}
 				log.Printf("proxy stream: %v", err)
-				// Pause after a failure so a failing stream doesn't
-				// reconnect in a tight loop.
+				// Avoid reconnecting in a tight loop.
 				time.Sleep(2 * time.Second)
 				break
 			}
 			fmt.Println(event.IP, event.Provider, event.Type)
 		}
-		// The server closes each stream after at most 30 minutes, and the
-		// loop then reconnects at once.
+		// Reconnect after the server closes the stream.
 	}
 }
 
