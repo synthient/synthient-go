@@ -14,13 +14,9 @@ import (
 // IPInfo is the intelligence Synthient holds for an IP address. Network,
 // Location, and Intelligence are nil when the API has no data for them.
 type IPInfo struct {
-	// IP is the address that was looked up.
-	IP netip.Addr `json:"ip"`
-	// Network describes the network that announces the address.
-	Network  *Network  `json:"network,omitempty"`
-	Location *Location `json:"location,omitempty"`
-	// Intelligence holds the risk score and the proxy, VPN, and device
-	// observations for the address.
+	IP           netip.Addr    `json:"ip"`
+	Network      *Network      `json:"network,omitempty"`
+	Location     *Location     `json:"location,omitempty"`
 	Intelligence *Intelligence `json:"intelligence,omitempty"`
 }
 
@@ -87,8 +83,7 @@ type Intelligence struct {
 	// Providers are the proxy, VPN, and anonymizer services seen using the
 	// address. An empty list does not mean the address is clean.
 	Providers []Provider `json:"providers"`
-	// Devices are the device types seen behind the address.
-	Devices []Device `json:"devices"`
+	Devices   []Device   `json:"devices"`
 }
 
 // Provider is a proxy, VPN, or anonymizer service seen using an address.
@@ -124,31 +119,24 @@ const (
 
 // DomainInfo is the honeypot traffic Synthient has observed for a domain.
 type DomainInfo struct {
-	// Domain is the domain that was looked up.
 	Domain string `json:"domain"`
 	// Status is whether the domain had events in the last 24 hours.
-	Status DomainStatus `json:"status"`
-	// Stats holds aggregate event counts.
-	Stats DomainStats `json:"stats"`
-	// UniqueIPs counts the distinct source addresses.
-	UniqueIPs UniqueIPs `json:"unique_ips"`
-	// TimeSeries holds daily event counts.
+	Status     DomainStatus      `json:"status"`
+	Stats      DomainStats       `json:"stats"`
+	UniqueIPs  UniqueIPs         `json:"unique_ips"`
 	TimeSeries []TimeSeriesPoint `json:"time_series"`
 	// TopASN is the network that sent the most events. It is zero when
 	// there are no events.
-	TopASN ASNCount `json:"top_asn"`
-	// TopSubdomains are the most targeted subdomains.
+	TopASN        ASNCount         `json:"top_asn"`
 	TopSubdomains []SubdomainCount `json:"top_subdomains"`
-	// TopPorts are the most targeted ports.
-	TopPorts []PortCount `json:"top_ports"`
+	TopPorts      []PortCount      `json:"top_ports"`
 	// GeoDistribution counts events by source country.
 	GeoDistribution []CountryCount `json:"geo_distribution"`
 	// HourDOWHeatmap counts the last 30 days of events by UTC day of week and
 	// hour, indexed as HourDOWHeatmap[day][hour]. Day 0 is Monday, unlike
 	// time.Weekday, where 0 is Sunday.
-	HourDOWHeatmap [][]int64 `json:"hour_dow_heatmap"`
-	// ActivityStats describes the hourly activity pattern.
-	ActivityStats ActivityStats `json:"activity_stats"`
+	HourDOWHeatmap [][]int64     `json:"hour_dow_heatmap"`
+	ActivityStats  ActivityStats `json:"activity_stats"`
 	// RecentEvents are the most recent events, capped by
 	// LookupDomainParams.Limit.
 	RecentEvents []DomainEvent `json:"recent_events"`
@@ -182,11 +170,10 @@ type UniqueIPs struct {
 
 // TimeSeriesPoint holds the event counts for one day.
 type TimeSeriesPoint struct {
-	// Date is the start of the day.
-	Date   Timestamp `json:"date"`
-	Events int64     `json:"events"`
-	// UniqueIPs is the number of distinct source addresses that day.
-	UniqueIPs int64 `json:"unique_ips"`
+	// Date is the start of the UTC day.
+	Date      Timestamp `json:"date"`
+	Events    int64     `json:"events"`
+	UniqueIPs int64     `json:"unique_ips"`
 }
 
 // ASNCount is an autonomous system and its event count.
@@ -198,14 +185,12 @@ type ASNCount struct {
 // SubdomainCount is a subdomain and its event count.
 type SubdomainCount struct {
 	Subdomain string `json:"subdomain"`
-	// Count is the number of events that targeted it.
-	Count int64 `json:"count"`
+	Count     int64  `json:"count"`
 }
 
 // PortCount is a port and its event count.
 type PortCount struct {
-	Port int `json:"port"`
-	// Count is the number of events that targeted it.
+	Port  int   `json:"port"`
 	Count int64 `json:"count"`
 }
 
@@ -248,9 +233,8 @@ type DomainEvent struct {
 	// names the field source_ip_masked, but the address is not masked.
 	SourceIP        string `json:"source_ip_masked"`
 	TargetSubdomain string `json:"target_subdomain"`
-	// CountryCode is the source country.
-	CountryCode string `json:"country_code"`
-	Port        int    `json:"port"`
+	CountryCode     string `json:"country_code"`
+	Port            int    `json:"port"`
 }
 
 // LookupDomainParams holds optional parameters for LookupDomain.

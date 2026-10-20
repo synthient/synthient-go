@@ -19,7 +19,6 @@ import (
 //		time.Sleep(apiErr.RetryAfter)
 //	}
 type APIError struct {
-	// StatusCode is the HTTP status code of the response.
 	StatusCode int
 	// Type is a URI identifying the problem type, for example
 	// "https://docs.synthient.com/errors/unauthorized".

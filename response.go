@@ -24,8 +24,7 @@ type ResponseMetadata struct {
 // are shared by every key of a team.
 type RateLimit struct {
 	// Limit is the bucket size, which is the burst the operation allows.
-	Limit int
-	// Remaining is the number of requests left in the bucket.
+	Limit     int
 	Remaining int
 	// Reset is how long until the bucket is full again.
 	Reset time.Duration

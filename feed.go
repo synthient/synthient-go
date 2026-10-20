@@ -82,8 +82,7 @@ type ExportPage struct {
 type Export struct {
 	// ID identifies the export for ExportMeta, Download, and DownloadURL. On
 	// the first page, the newest hourly export may have the ID LatestExport.
-	ID string `json:"id"`
-	// Kind is whether the export covers an hour or a day.
+	ID   string     `json:"id"`
 	Kind ExportKind `json:"kind"`
 	// Date is the UTC day of the export as "YYYY-MM-DD".
 	Date string `json:"date"`
@@ -110,10 +109,9 @@ const (
 
 // ExportMeta describes a parquet export without its contents.
 type ExportMeta struct {
-	ID     string `json:"id"`
-	Stream string `json:"stream"`
-	// Kind is whether the export covers an hour or a day.
-	Kind ExportKind `json:"kind"`
+	ID     string     `json:"id"`
+	Stream string     `json:"stream"`
+	Kind   ExportKind `json:"kind"`
 	// Format is the file format, "parquet".
 	Format string `json:"format"`
 	// Date is the start of the export's UTC day or hour.
@@ -124,10 +122,9 @@ type ExportMeta struct {
 	// Size is the size of the parquet file in bytes.
 	Size int64 `json:"size"`
 	// Checksum is the hex-encoded SHA-256 of the parquet file.
-	Checksum  string    `json:"checksum"`
-	CreatedAt Timestamp `json:"created_at"`
-	// Schema lists the parquet columns.
-	Schema ParquetSchema `json:"schema"`
+	Checksum  string        `json:"checksum"`
+	CreatedAt Timestamp     `json:"created_at"`
+	Schema    ParquetSchema `json:"schema"`
 }
 
 // ParquetSchema lists the columns of a parquet export.

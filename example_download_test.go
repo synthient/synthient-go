@@ -26,8 +26,6 @@ func ExampleFeed_Download() {
 	}
 }
 
-// saveExport writes an export to path and verifies it against the export's
-// SHA-256 checksum.
 func saveExport(ctx context.Context, feed *synthient.Feed[synthient.ProxyEvent], id, path string) error {
 	meta, err := feed.ExportMeta(ctx, id)
 	if err != nil {

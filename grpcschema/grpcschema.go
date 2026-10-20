@@ -47,7 +47,8 @@ type Options struct {
 type Schema struct {
 	// Endpoint is the normalized address that was queried.
 	Endpoint string
-	// Symbols are the service or message names that were resolved.
+	// Symbols are the trimmed, deduplicated Options.Symbols, or the services
+	// the server lists when Options.Symbols is empty.
 	Symbols []string
 	// DescriptorSet holds the resolved files, each after the files it imports.
 	DescriptorSet *descriptorpb.FileDescriptorSet
@@ -127,8 +128,6 @@ func Fetch(ctx context.Context, apiKey string, opts ...Options) (*Schema, error)
 	}, nil
 }
 
-// normalizeEndpoint returns raw as host:port and the host name for TLS
-// verification.
 func normalizeEndpoint(raw string) (endpoint, host string, err error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

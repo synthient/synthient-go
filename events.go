@@ -78,7 +78,6 @@ type TorrentEvent struct {
 
 // TorrentFile is a file in a torrent.
 type TorrentFile struct {
-	// Path is the file path within the torrent.
 	Path string `json:"path"`
 	// Length is the file size in bytes.
 	Length int64 `json:"length"`
@@ -96,7 +95,6 @@ type TorrentPeer struct {
 
 // JA4TEvent is a JA4T TCP fingerprint sighting.
 type JA4TEvent struct {
-	// IP is the address the fingerprint was seen from.
 	IP   string `json:"ip"`
 	JA4T string `json:"ja4t"`
 	// Provider is the service tag of the address.
@@ -116,7 +114,6 @@ type HeliosMeta struct {
 	ProxyIP string `json:"proxy_ip"`
 	// Server is the sensor that captured the traffic.
 	Server string `json:"server"`
-	// PoolID is the sensor pool.
 	PoolID string `json:"pool_id"`
 	// Provider is the proxy service the traffic arrived through.
 	Provider string `json:"provider"`
@@ -134,12 +131,10 @@ type HeliosHTTPEvent struct {
 	// Port is the destination port.
 	Port int `json:"port"`
 	// Protocol is "http".
-	Protocol string `json:"protocol"`
-	// Meta describes the capturing sensor.
-	Meta HeliosMeta `json:"meta"`
-	// Details is the parsed request.
-	Details HTTPRequestDetails `json:"details"`
-	Raw     []byte             `json:"raw"`
+	Protocol string             `json:"protocol"`
+	Meta     HeliosMeta         `json:"meta"`
+	Details  HTTPRequestDetails `json:"details"`
+	Raw      []byte             `json:"raw"`
 }
 
 // HTTPRequestDetails is a parsed HTTP request.
@@ -164,9 +159,8 @@ type HeliosHTTPSEvent struct {
 	// Port is the destination port.
 	Port int `json:"port"`
 	// Protocol is "https".
-	Protocol string `json:"protocol"`
-	// Meta describes the capturing sensor.
-	Meta HeliosMeta `json:"meta"`
+	Protocol string     `json:"protocol"`
+	Meta     HeliosMeta `json:"meta"`
 	// Details is the parsed ClientHello, or nil if the sensor could not parse
 	// the handshake.
 	Details *TLSClientHello `json:"details"`
@@ -190,20 +184,15 @@ type TLSClientHello struct {
 	CipherSuites       []TLSCodeName `json:"cipher_suites"`
 	CompressionMethods []int         `json:"compression_methods"`
 	// Extensions are the extensions in wire order.
-	Extensions []TLSExtension `json:"extensions"`
-	// SNI is the server_name extension value.
-	SNI string `json:"sni"`
-	// ALPN lists the offered application protocols.
-	ALPN              []string `json:"alpn"`
-	SupportedVersions []string `json:"supported_versions"`
-	// SupportedGroups are the offered key exchange groups.
-	SupportedGroups     []TLSCodeName `json:"supported_groups"`
-	SignatureAlgorithms []TLSCodeName `json:"signature_algorithms"`
-	ECPointFormats      []string      `json:"ec_point_formats"`
-	// KeyShareGroups are the groups the client sent key shares for.
-	KeyShareGroups []string `json:"key_share_groups"`
-	// PSKKeyExchangeModes are the offered pre-shared key exchange modes.
-	PSKKeyExchangeModes []string `json:"psk_key_exchange_modes"`
+	Extensions          []TLSExtension `json:"extensions"`
+	SNI                 string         `json:"sni"`
+	ALPN                []string       `json:"alpn"`
+	SupportedVersions   []string       `json:"supported_versions"`
+	SupportedGroups     []TLSCodeName  `json:"supported_groups"`
+	SignatureAlgorithms []TLSCodeName  `json:"signature_algorithms"`
+	ECPointFormats      []string       `json:"ec_point_formats"`
+	KeyShareGroups      []string       `json:"key_share_groups"`
+	PSKKeyExchangeModes []string       `json:"psk_key_exchange_modes"`
 	// CompressCertificate lists the offered certificate compression algorithms.
 	CompressCertificate []string `json:"compress_certificate"`
 	HasGREASE           bool     `json:"has_grease"`
@@ -223,16 +212,13 @@ type TLSClientHello struct {
 // TLSCodeName is a TLS registry code point and its name. GREASE values are
 // named "GREASE(0x....)".
 type TLSCodeName struct {
-	Code int `json:"code"`
-	// Name is the code point's registered name.
+	Code int    `json:"code"`
 	Name string `json:"name"`
 }
 
 // TLSExtension is an extension in a TLS ClientHello.
 type TLSExtension struct {
-	// Code is the extension type.
-	Code int `json:"code"`
-	// Name is the extension's registered name.
+	Code int    `json:"code"`
 	Name string `json:"name"`
 	// Length is the extension body length in bytes.
 	Length int `json:"length"`
@@ -252,9 +238,8 @@ type HeliosDNSEvent struct {
 	// Port is the destination port.
 	Port int `json:"port"`
 	// Protocol is "dns".
-	Protocol string `json:"protocol"`
-	// Meta describes the capturing sensor.
-	Meta HeliosMeta `json:"meta"`
+	Protocol string     `json:"protocol"`
+	Meta     HeliosMeta `json:"meta"`
 }
 
 // HeliosADBEvent is an Android Debug Bridge shell command captured by a

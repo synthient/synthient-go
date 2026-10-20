@@ -17,8 +17,7 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-// startServer starts a loopback gRPC server with reflection and the health
-// service. keys receives the x-api-key metadata of each reflection stream.
+// keys receives the x-api-key metadata of each reflection stream.
 func startServer(t *testing.T) (addr string, keys <-chan []string) {
 	t.Helper()
 	var config net.ListenConfig

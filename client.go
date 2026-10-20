@@ -16,7 +16,8 @@ import (
 // DefaultBaseURL is the base URL of the Synthient HTTP API.
 const DefaultBaseURL = "https://api.synthient.com/api/v4"
 
-// ErrMissingAPIKey is returned by NewClient when the API key is empty.
+// ErrMissingAPIKey is returned by NewClient when the API key is empty or only
+// whitespace.
 var ErrMissingAPIKey = errors.New("synthient: missing API key")
 
 const (

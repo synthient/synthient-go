@@ -44,7 +44,7 @@ func run(ctx context.Context, client *synthient.Client) error {
 					return err
 				}
 				log.Printf("stream: %v", err)
-				// Avoid reconnecting in a tight loop.
+				// Stream connections are limited to 30 per minute per team.
 				select {
 				case <-ctx.Done():
 				case <-time.After(2 * time.Second):

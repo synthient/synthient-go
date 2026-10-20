@@ -12,19 +12,16 @@ type Account struct {
 	FirstName    string       `json:"first_name"`
 	LastName     string       `json:"last_name"`
 	Organization Organization `json:"organization"`
-	// Scopes are the permissions granted to the API key.
-	Scopes []Scope `json:"scopes"`
-	// LookupQuota is the remaining lookup credit balance.
-	LookupQuota LookupQuota `json:"lookup_quota"`
+	Scopes       []Scope      `json:"scopes"`
+	LookupQuota  LookupQuota  `json:"lookup_quota"`
 	// APIKey describes the API key used for the request.
 	APIKey AccountAPIKey `json:"api_key"`
 }
 
 // Organization is the organization an account belongs to.
 type Organization struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	// Relation is the account's role in the organization.
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
 	Relation Relation `json:"relation"`
 }
 
@@ -80,9 +77,8 @@ type LookupQuota struct {
 
 // AccountAPIKey describes an API key.
 type AccountAPIKey struct {
-	// ID identifies the key. It is not the secret key itself.
-	ID string `json:"id"`
-	// Name is the key's display name.
+	// ID is not the secret key itself.
+	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 }
