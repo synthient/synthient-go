@@ -22,53 +22,75 @@
 
 ## Table of Contents
 
-- [synthient-go](#synthient-go)
-  - [SDK Installation](#sdk-installation)
-  - [Requirements](#requirements)
-  - [API Keys](#api-keys)
-  - [Authentication](#authentication)
-  - [SDK Example Usage](#sdk-example-usage)
-  - [Available Resources and Operations](#available-resources-and-operations)
+- [Installation](#installation)
+- [Quick start](#quick-start)
+- [Authentication](#authentication)
+- [Available Resources and Operations](#available-resources-and-operations)
+- [IP and domain lookups](#ip-and-domain-lookups)
+- [Account](#account)
+- [Feeds](#feeds)
   - [Streaming](#streaming)
   - [Pagination](#pagination)
   - [Downloads](#downloads)
-  - [Retries](#retries)
-  - [Timeouts](#timeouts)
-  - [Error Handling](#error-handling)
-  - [Server Selection](#server-selection)
-  - [Custom HTTP Client](#custom-http-client)
-  - [Debugging](#debugging)
-  - [gRPC Schema](#grpc-schema)
-- [Development](#development)
-  - [Maturity](#maturity)
-  - [Contributions](#contributions)
-  - [License](#license)
+- [Errors](#errors)
+- [Retries and timeouts](#retries-and-timeouts)
+- [Configuration](#configuration)
+- [Response metadata](#response-metadata)
+- [gRPC schema](#grpc-schema)
+- [Requirements](#requirements)
+- [Versioning](#versioning)
+- [Documentation](#documentation)
+- [Contributions](#contributions)
+- [License](#license)
 
-## SDK Installation
+## Installation
 
 ```sh
 go get github.com/synthient/synthient-go
 ```
 
-The [gRPC schema fetcher](#grpc-schema) is the `grpcschema` package in the same module.
+The package is named `synthient`. The [gRPC schema fetcher](#grpc-schema) is the `grpcschema` package in the same module.
 
-## Requirements
+## Quick start
 
-Go 1.26 or later. The `synthient` package uses only the standard library.
+Create a client with the API key in `SYNTHIENT_API_KEY` and look up one address:
 
-## API Keys
+```go
+package main
 
-Every request needs a Synthient API key. Keys are issued from the Synthient dashboard; if you don't have one, [contact us](mailto:contact@synthient.com). A key's scopes decide what it can call: `BASIC` covers the lookups and `Account`, and each feed has its own scopes, listed under [Feeds](#feeds).
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/netip"
+	"os"
 
-If a request fails even though you are sending a key:
+	"github.com/synthient/synthient-go"
+)
 
-- **401 Unauthorized**: the key is malformed, unknown, or revoked.
-- **402 Payment Required**: the team is out of lookup credits.
-- **403 Forbidden**: the key lacks the scope for that endpoint or feed.
+func main() {
+	ctx := context.Background()
 
-`Account` shows the key's scopes and the team's remaining credits.
+	client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	info, err := client.LookupIP(ctx, netip.MustParseAddr("8.8.8.8"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	if info.Intelligence != nil {
+		fmt.Println(info.Intelligence.RiskScore, info.Intelligence.Categories)
+	}
+}
+```
+
+A `Client` is safe for concurrent use, so create one and reuse it. The examples below reuse `client` and `ctx`, and runnable programs are in [_examples](_examples). The [Go SDK guide](https://docs.synthient.com/sdks/go) walks through the same steps.
 
 ## Authentication
+
+Every request needs a Synthient API key. Keys are issued from the Synthient dashboard; if you don't have one, [contact us](mailto:contact@synthient.com). A key's scopes decide what it can call: `BASIC` covers the lookups and `Account`, and each feed has its own scopes, listed under [Feeds](#feeds). See [Authentication](https://docs.synthient.com/authentication) for how keys and scopes work.
 
 This SDK supports the following security scheme:
 
@@ -87,42 +109,62 @@ if err != nil {
 
 `NewClient` makes no network calls. To check a key, call `Account`, which costs no credits.
 
-## SDK Example Usage
+If a request fails even though you are sending a key:
+
+- **401 Unauthorized**: the key is malformed, unknown, or revoked.
+- **402 Payment Required**: the team is out of lookup credits.
+- **403 Forbidden**: the key lacks the scope for that endpoint or feed.
+
+`Account` shows the key's scopes and the team's remaining credits.
+
+## Available Resources and Operations
+
+<details open>
+<summary>Available methods</summary>
+
+### [Client](https://pkg.go.dev/github.com/synthient/synthient-go#Client)
+
+- [`LookupIP`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIP) - Look up an IPv4 or IPv6 address
+- [`LookupIPs`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIPs) - Look up as many as 1000 addresses in one request
+- [`LookupDomain`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupDomain) - Look up the honeypot traffic observed for a domain
+- [`Account`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.Account) - Get the key's account, scopes, and remaining lookup credits
+- [`Health`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.Health) - Check that the API and its dependencies are healthy
+
+### [Feed](https://pkg.go.dev/github.com/synthient/synthient-go#Feed)
+
+Each feed is a field of the client, such as `client.Proxies`, and has the same methods:
+
+- [`Stream`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.Stream) - Iterate over the feed's real-time events
+- [`ListExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ListExports) - List one page of the feed's Parquet exports, newest first
+- [`AllExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.AllExports) - Iterate over every export, fetching pages as needed
+- [`ExportMeta`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ExportMeta) - Get an export's checksum, size, row count, and Parquet schema
+- [`Download`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.Download) - Download an export's Parquet file
+- [`DownloadURL`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.DownloadURL) - Get a presigned URL for an export's Parquet file, valid for 24 hours
+
+</details>
+
+## IP and domain lookups
+
+`LookupIP`, `LookupIPs`, and `LookupDomain` are covered in the [lookups reference](https://docs.synthient.com/sdks/go/lookups), and the fields they return in the [IP API reference](https://docs.synthient.com/ipapi) and the [types reference](https://docs.synthient.com/sdks/go/types).
 
 ### Look up an IP address
 
 Get the network, location, and risk intelligence for an IPv4 or IPv6 address. Each lookup costs one credit; failed lookups are free.
 
 ```go
-package main
-
-import (
-	"context"
-	"fmt"
-	"log"
-	"net/netip"
-	"os"
-
-	"github.com/synthient/synthient-go"
-)
-
-func main() {
-	client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	info, err := client.LookupIP(context.Background(), netip.MustParseAddr("8.8.8.8"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	if info.Intelligence != nil {
-		fmt.Println(info.Intelligence.RiskScore, info.Intelligence.Categories)
-	}
+info, err := client.LookupIP(ctx, netip.MustParseAddr("8.8.8.8"))
+if err != nil {
+	log.Fatal(err)
+}
+if info.Network != nil {
+	fmt.Println(info.Network.ISP, info.Network.Type)
+}
+if info.Location != nil {
+	fmt.Println(info.Location.City, info.Location.Country)
 }
 ```
 
-`Network`, `Location`, and `Intelligence` are nil when the API has no data for them. The examples below reuse `client` and `ctx`, and runnable programs are in [_examples](_examples).
+`Network`, `Location`, and `Intelligence` are nil when the API has no data for them. Private and reserved addresses return a 422 `*APIError`.
 
 ### Look up many IP addresses
 
@@ -158,7 +200,9 @@ for _, event := range domain.RecentEvents {
 }
 ```
 
-### Check your account
+`Limit` caps the recent events returned, from 1 to 1000, and zero uses the API default of 50. Internationalized names must be sent in Punycode. A domain that has never been observed returns the status `inactive` and zero counts, not an error.
+
+## Account
 
 Get the key's account, scopes, and remaining lookup credits, at no cost.
 
@@ -170,29 +214,18 @@ if err != nil {
 fmt.Println(account.Organization.Name, account.Scopes, account.LookupQuota.Credits)
 ```
 
-## Available Resources and Operations
+`Health` returns nil if the API and its dependencies are healthy, or a 503 `*APIError` if not. It costs no credits and does not check the key:
 
-<details open>
-<summary>Available methods</summary>
+```go
+err = client.Health(ctx)
+if err != nil {
+	log.Fatal(err)
+}
+```
 
-### [Client](https://pkg.go.dev/github.com/synthient/synthient-go#Client)
+## Feeds
 
-- [`LookupIP`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIP) - Look up an IPv4 or IPv6 address
-- [`LookupIPs`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIPs) - Look up as many as 1000 addresses in one request
-- [`LookupDomain`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupDomain) - Look up the honeypot traffic observed for a domain
-- [`Account`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.Account) - Get the key's account, scopes, and remaining lookup credits
-- [`Health`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.Health) - Check that the API and its dependencies are healthy
-
-### [Feeds](https://pkg.go.dev/github.com/synthient/synthient-go#Feed)
-
-Each feed is a field of the client, such as `client.Proxies`, and has the same methods:
-
-- [`Stream`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.Stream) - Iterate over the feed's real-time events
-- [`ListExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ListExports) - List one page of the feed's Parquet exports, newest first
-- [`AllExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.AllExports) - Iterate over every export, fetching pages as needed
-- [`ExportMeta`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ExportMeta) - Get an export's checksum, size, row count, and Parquet schema
-- [`Download`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.Download) - Download an export's Parquet file
-- [`DownloadURL`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.DownloadURL) - Get a presigned URL for an export's Parquet file, valid for 24 hours
+Each feed has a real-time stream and hourly Parquet exports that roll up into daily exports. Streaming and exports need separate scopes on the key:
 
 | Field         | Data                                          | Event type         | Stream scope            | Export scope          |
 | ------------- | --------------------------------------------- | ------------------ | ----------------------- | --------------------- |
@@ -205,9 +238,9 @@ Each feed is a field of the client, such as `client.Proxies`, and has the same m
 | `HeliosDNS`   | Helios honeypot tunnel destinations           | `HeliosDNSEvent`   | `HONEYPOT_DNS_STREAM`   | `HONEYPOT_DNS_FEED`   |
 | `HeliosADB`   | Helios honeypot Android Debug Bridge commands | `HeliosADBEvent`   | `HONEYPOT_ADB_STREAM`   | `HONEYPOT_ADB_FEED`   |
 
-</details>
+See the [feeds reference](https://docs.synthient.com/sdks/go/feeds) for every method and the [types reference](https://docs.synthient.com/sdks/go/types) for the event fields. The data behind the feeds is described under [Firehose](https://docs.synthient.com/enterprise/firehose) and [Feeds](https://docs.synthient.com/enterprise/feeds).
 
-## Streaming
+### Streaming
 
 `Stream` iterates over a feed's real-time events. Each `range` opens a connection, and breaking out of the loop closes it:
 
@@ -234,9 +267,9 @@ for ctx.Err() == nil {
 - Any other failure ends the iteration, and the loop waits 2 seconds before reconnecting.
 - Events sent while disconnected are missed. The API has no resume cursor.
 
-## Pagination
+### Pagination
 
-`ListExports` returns one page of a feed's exports, newest first. Pass `page.NextCursor` as `Cursor` to get the next page; it is empty on the last one.
+`ListExports` returns one page of a feed's exports, newest first. Pass `page.NextCursor` as `Cursor` to get the next page; it is empty on the last one. `Limit` is the page size, from 1 to 500, and zero uses the API default of 100.
 
 ```go
 page, err := client.Proxies.ListExports(ctx, synthient.ListExportsParams{Limit: 50})
@@ -259,9 +292,9 @@ for export, err := range client.Proxies.AllExports(ctx) {
 }
 ```
 
-On the first page, the newest hourly export has the ID `latest`, a moving alias for the freshest export. Its `Date` and `Hour` give its stable ID, such as `2026-10-14/21`.
+On the first page, the newest hourly export may have the ID `latest`, a moving alias for the freshest export. Its `Date` and `Hour` give its stable ID, such as `2026-10-14/21`.
 
-## Downloads
+### Downloads
 
 Exports are Parquet files. `Download` returns a file's contents, which you must close:
 
@@ -291,42 +324,7 @@ if err != nil {
 - `DownloadURL` returns a presigned URL that works without a key for 24 hours, so treat it as a secret. Your API key is never sent to the storage host.
 - Hourly exports roll into the daily export shortly after 00:30 UTC the next day. After that, the hour returns a 400.
 
-## Retries
-
-The client retries a failed request up to twice, backing off exponentially with jitter and honoring `Retry-After`:
-
-| Requests                    | Retried on                                                                                   |
-| --------------------------- | -------------------------------------------------------------------------------------------- |
-| Account and feed requests   | 500, 502, 503, and 504, most transport errors, and 429 with `Retry-After`                    |
-| Billed lookups and `Health` | Only 429 with `Retry-After`, which comes before any work, so a lookup is never charged twice |
-
-A 429 without `Retry-After` means the monthly request budget is spent or too many streams are open, so it is returned at once. Downloads from the storage host are never retried.
-
-Set the number of retries with `WithMaxRetries`. Zero disables them:
-
-```go
-client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"),
-	synthient.WithMaxRetries(4),
-)
-if err != nil {
-	log.Fatal(err)
-}
-```
-
-## Timeouts
-
-The client sets no overall timeout, because streams and downloads are long-lived. Bound a call with a context deadline:
-
-```go
-ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-defer cancel()
-
-info, err := client.LookupIP(ctx, netip.MustParseAddr("8.8.8.8"))
-```
-
-The default HTTP client waits at most one minute for response headers.
-
-## Error Handling
+## Errors
 
 A request that fails with a non-success status returns an [`*APIError`](https://pkg.go.dev/github.com/synthient/synthient-go#APIError):
 
@@ -361,10 +359,10 @@ if ok {
 }
 ```
 
-### Error Types
+### Error types
 
 - [`*APIError`](https://pkg.go.dev/github.com/synthient/synthient-go#APIError): the API, or the storage host during `Download`, returned a non-success status.
-- [`ErrMissingAPIKey`](https://pkg.go.dev/github.com/synthient/synthient-go#ErrMissingAPIKey): `NewClient` was given an empty key.
+- [`ErrMissingAPIKey`](https://pkg.go.dev/github.com/synthient/synthient-go#ErrMissingAPIKey): `NewClient` was given an empty or all-whitespace key.
 - Context errors: match `context.Canceled` or `context.DeadlineExceeded` with `errors.Is`.
 - Transport errors: network failures, as the `*url.Error` from the HTTP client.
 - Other errors: invalid arguments, rejected before any request is sent, and responses that can't be decoded. Their messages start with `synthient:`.
@@ -386,9 +384,56 @@ if ok {
 
 </details>
 
-## Server Selection
+See [Errors and retries](https://docs.synthient.com/sdks/go/errors) for the SDK's error reference and [Errors](https://docs.synthient.com/errors) for what each status means.
 
-### Override Server URL Per-Client
+## Retries and timeouts
+
+The client retries a failed request up to twice, backing off exponentially with jitter and honoring `Retry-After`:
+
+| Requests                    | Retried on                                                                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| Account and feed requests   | 500, 502, 503, and 504, most transport errors, and 429 with `Retry-After`                    |
+| Billed lookups and `Health` | Only 429 with `Retry-After`, which comes before any work, so a lookup is never charged twice |
+
+A 429 without `Retry-After` means the monthly request budget is spent or too many streams are open, so it is returned at once. Downloads from the storage host are never retried.
+
+Waits start at one second and double up to 30 seconds. A `Retry-After` longer than a minute, or a wait that would pass the context deadline, returns the response instead of retrying.
+
+Set the number of retries with `WithMaxRetries`. Zero disables them:
+
+```go
+client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"),
+	synthient.WithMaxRetries(4),
+)
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+The client sets no overall timeout, because streams and downloads are long-lived. Bound a call with a context deadline:
+
+```go
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+defer cancel()
+
+info, err := client.LookupIP(ctx, netip.MustParseAddr("8.8.8.8"))
+```
+
+The default HTTP client waits at most one minute for response headers.
+
+## Configuration
+
+Each option is a function passed to `NewClient`. An invalid option, such as a malformed base URL or a negative retry count, makes `NewClient` return an error. See the [client reference](https://docs.synthient.com/sdks/go/client).
+
+| Option             | Default                              | Description                                       |
+| ------------------ | ------------------------------------ | ------------------------------------------------- |
+| `WithBaseURL`      | `https://api.synthient.com/api/v4`   | API base URL, including the version path          |
+| `WithHTTPClient`   | One-minute wait for response headers | The `*http.Client` used to send requests          |
+| `WithMaxRetries`   | `2`                                  | How many times a failed request is retried        |
+| `WithUserAgent`    | `synthient-go/` and the SDK version  | Product token appended to the `User-Agent` header |
+| `WithResponseHook` | None                                 | Function called after every API response          |
+
+### Server URL
 
 The default server is `https://api.synthient.com/api/v4`. Use `WithBaseURL` to send requests elsewhere, such as a mock server in tests:
 
@@ -401,7 +446,7 @@ if err != nil {
 }
 ```
 
-## Custom HTTP Client
+### Custom HTTP client
 
 Pass your own `*http.Client` with `WithHTTPClient`, for example to use a proxy. Clone the default transport to keep its connection and TLS settings:
 
@@ -428,9 +473,9 @@ if err != nil {
 
 `WithUserAgent("my-app/1.2")` adds your product token to the `User-Agent` header.
 
-## Debugging
+## Response metadata
 
-`WithResponseHook` calls a function after every API response, including retries, pages, and stream handshakes, with the status, request ID, rate limit, and headers:
+`WithResponseHook` calls a function after every API response, including retries, pages, and stream handshakes, with the status, request ID, rate limit, and headers. Responses from the storage host during `Download` are excluded:
 
 ```go
 client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"),
@@ -446,12 +491,21 @@ if err != nil {
 }
 ```
 
+| Field        | Type          | Description                                                        |
+| ------------ | ------------- | ------------------------------------------------------------------ |
+| `StatusCode` | `int`         | HTTP status code of the response                                   |
+| `RequestID`  | `string`      | The `X-Request-ID` header                                          |
+| `RateLimit`  | `*RateLimit`  | `Limit`, `Remaining`, and `Reset`, or nil if the response has none |
+| `Header`     | `http.Header` | An independent copy of the response headers                        |
+
+`RateLimit` comes from the `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset` headers, and `Reset` is a `time.Duration`. Limits are shared by every key of a team; see [Rate Limits](https://docs.synthient.com/rate-limits).
+
 The hook must be safe for concurrent use.
 
 > [!WARNING]
 > Response headers can contain secrets, such as presigned download URLs. Avoid logging `meta.Header` in production.
 
-## gRPC Schema
+## gRPC schema
 
 The [`grpcschema`](https://pkg.go.dev/github.com/synthient/synthient-go/grpcschema) package fetches the protobuf schema of the [Synthient gRPC API](https://docs.synthient.com/grpc) through server reflection:
 
@@ -471,11 +525,34 @@ for _, file := range schema.DescriptorSet.GetFile() {
 
 `schema.DescriptorSet` is a `*descriptorpb.FileDescriptorSet`. `grpcschema.Explain` describes common gRPC errors in plain language.
 
-# Development
+`Fetch` takes an optional `grpcschema.Options`. The zero value fetches every service from `grpcschema.DefaultEndpoint`, `grpc.synthient.com:443`, over TLS. Set its fields to query another server, such as a local one:
 
-## Maturity
+```go
+schema, err := grpcschema.Fetch(ctx, os.Getenv("SYNTHIENT_API_KEY"), grpcschema.Options{
+	Endpoint:  "localhost:50051",
+	Plaintext: true,
+})
+```
 
-This SDK follows [Semantic Versioning](https://semver.org). Breaking changes ship only in a new major version, with a new import path such as `github.com/synthient/synthient-go/v2`.
+- `Endpoint` is `host:port`, a bare host (port 443 is assumed), or a `grpc://` or `https://` URL.
+- `Plaintext` disables TLS, for local development servers.
+- `Symbols` are the fully qualified service or message names to resolve. Empty resolves every service the server lists.
+
+See [gRPC schema](https://docs.synthient.com/sdks/go/grpc-schema) for the full reference.
+
+## Requirements
+
+Go 1.26 or later. The `synthient` package uses only the standard library; the `grpcschema` package depends on `google.golang.org/grpc` and `google.golang.org/protobuf`.
+
+## Versioning
+
+This SDK follows [Semantic Versioning](https://semver.org). Breaking changes ship only in a new major version, with a new import path such as `github.com/synthient/synthient-go/v2`. The running version is the `synthient.Version` constant, which is sent in the `User-Agent` header.
+
+## Documentation
+
+- [Go SDK guide](https://docs.synthient.com/sdks/go): [client](https://docs.synthient.com/sdks/go/client), [lookups](https://docs.synthient.com/sdks/go/lookups), [feeds](https://docs.synthient.com/sdks/go/feeds), [errors and retries](https://docs.synthient.com/sdks/go/errors), [types](https://docs.synthient.com/sdks/go/types), and [gRPC schema](https://docs.synthient.com/sdks/go/grpc-schema)
+- [API reference on pkg.go.dev](https://pkg.go.dev/github.com/synthient/synthient-go)
+- [Synthient API documentation](https://docs.synthient.com): [IP API](https://docs.synthient.com/ipapi), [authentication](https://docs.synthient.com/authentication), [rate limits](https://docs.synthient.com/rate-limits), [errors](https://docs.synthient.com/errors), [feeds](https://docs.synthient.com/enterprise/feeds), and [firehose](https://docs.synthient.com/enterprise/firehose)
 
 ## Contributions
 
