@@ -45,6 +45,10 @@ type Client struct {
 	HeliosDNS *Feed[HeliosDNSEvent]
 	// HeliosADB is the Helios honeypot Android Debug Bridge command feed.
 	HeliosADB *Feed[HeliosADBEvent]
+	// Geolocation is the daily IP geolocation dataset.
+	Geolocation *Dataset
+	// WHOIS is the daily WHOIS registry dataset.
+	WHOIS *Dataset
 
 	apiKey     string
 	baseURL    *url.URL
@@ -153,10 +157,12 @@ func NewClient(apiKey string, opts ...Option) (*Client, error) {
 	c.Anonymizers = &Feed[AnonymizerEvent]{client: c, path: "/feeds/anonymizers"}
 	c.Torrents = &Feed[TorrentEvent]{client: c, path: "/feeds/torrents"}
 	c.JA4T = &Feed[JA4TEvent]{client: c, path: "/feeds/ja4t"}
-	c.HeliosHTTP = &Feed[HeliosHTTPEvent]{client: c, path: "/feeds/helio/http"}
-	c.HeliosHTTPS = &Feed[HeliosHTTPSEvent]{client: c, path: "/feeds/helio/https"}
-	c.HeliosDNS = &Feed[HeliosDNSEvent]{client: c, path: "/feeds/helio/dns"}
-	c.HeliosADB = &Feed[HeliosADBEvent]{client: c, path: "/feeds/helio/adb"}
+	c.HeliosHTTP = &Feed[HeliosHTTPEvent]{client: c, path: "/feeds/helios/http"}
+	c.HeliosHTTPS = &Feed[HeliosHTTPSEvent]{client: c, path: "/feeds/helios/https"}
+	c.HeliosDNS = &Feed[HeliosDNSEvent]{client: c, path: "/feeds/helios/dns"}
+	c.HeliosADB = &Feed[HeliosADBEvent]{client: c, path: "/feeds/helios/adb"}
+	c.Geolocation = &Dataset{client: c, path: "/feeds/geolocation"}
+	c.WHOIS = &Dataset{client: c, path: "/feeds/whois"}
 	return c, nil
 }
 

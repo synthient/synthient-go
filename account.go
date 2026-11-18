@@ -14,8 +14,9 @@ type Account struct {
 	Organization Organization `json:"organization"`
 	Scopes       []Scope      `json:"scopes"`
 	LookupQuota  LookupQuota  `json:"lookup_quota"`
-	// APIKey describes the API key used for the request.
-	APIKey AccountAPIKey `json:"api_key"`
+	// APIKey describes the API key used for the request. It is nil if the key
+	// was deleted while the request was in flight.
+	APIKey *AccountAPIKey `json:"api_key"`
 }
 
 // Organization is the organization an account belongs to.
@@ -41,7 +42,8 @@ type Scope string
 // API key scopes. ScopeBasic authorizes lookups and Account. Each feed has one
 // scope for its exports and one for its stream, such as ScopeTorrentsFeed and
 // ScopeTorrentsStream. The proxy feed's are ScopeProxyFeeds and
-// ScopeProxyFirehose.
+// ScopeProxyFirehose. The datasets need ScopeGeolocationFeed and
+// ScopeWHOISFeed.
 const (
 	ScopeBasic               Scope = "BASIC"
 	ScopeProxyFeeds          Scope = "PROXY_FEEDS"
@@ -64,7 +66,17 @@ const (
 	ScopeJA4Stream           Scope = "JA4_STREAM"
 	ScopeJA4TFeed            Scope = "JA4T_FEED"
 	ScopeJA4TStream          Scope = "JA4T_STREAM"
-	ScopeAdminProxies        Scope = "ADMIN_PROXIES"
+	ScopeGeolocationFeed     Scope = "GEOLOCATION_FEED"
+	ScopeWHOISFeed           Scope = "WHOIS_FEED"
+	// ScopeHelios is a dashboard permission. It authorizes no API operation.
+	ScopeHelios Scope = "HELIOS"
+	// These scopes are reserved for upcoming feeds and authorize no operation
+	// yet.
+	ScopeWHOISStream       Scope = "WHOIS_STREAM"
+	ScopeNetworkIOCsFeed   Scope = "NETWORK_IOCS_FEED"
+	ScopeNetworkIOCsStream Scope = "NETWORK_IOCS_STREAM"
+	ScopeFileIOCsFeed      Scope = "FILE_IOCS_FEED"
+	ScopeFileIOCsStream    Scope = "FILE_IOCS_STREAM"
 )
 
 // LookupQuota is an account's lookup credit balance.
@@ -90,8 +102,8 @@ func (c *Client) Account(ctx context.Context) (*Account, error) {
 }
 
 // Health returns nil if the API and its dependencies are healthy, or a 503
-// *APIError if not. It costs no credits and does not check the key, though a
-// malformed key returns a 401 *APIError.
+// *APIError if not. It costs no credits. It needs a valid key with any scope,
+// and returns a 401 *APIError without one.
 func (c *Client) Health(ctx context.Context) error {
 	_, err := doJSON[struct{}](ctx, c, request{method: http.MethodGet, path: "/health", policy: retryRateLimit})
 	return err

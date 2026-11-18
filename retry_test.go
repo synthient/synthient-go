@@ -22,10 +22,6 @@ func TestBilledLookupsDoNotReplayOnReusedConnection(t *testing.T) {
 			_, err := c.LookupIP(ctx, netip.MustParseAddr("1.1.1.1"))
 			return err
 		},
-		"domain": func(ctx context.Context, c *Client) error {
-			_, err := c.LookupDomain(ctx, "example.com")
-			return err
-		},
 		"batch": func(ctx context.Context, c *Client) error {
 			_, err := c.LookupIPs(ctx, []netip.Addr{netip.MustParseAddr("1.1.1.1")})
 			return err

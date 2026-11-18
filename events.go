@@ -108,6 +108,17 @@ type JA4TEvent struct {
 	Timestamp Timestamp `json:"timestamp"`
 }
 
+// HeliosTransport is the transport a Helios event or handshake arrived over.
+// New values may be added.
+type HeliosTransport string
+
+// Helios transports.
+const (
+	HeliosTransportTCP  HeliosTransport = "tcp"
+	HeliosTransportUDP  HeliosTransport = "udp"
+	HeliosTransportQUIC HeliosTransport = "quic"
+)
+
 // HeliosMeta describes the Helios honeypot sensor that captured an event.
 type HeliosMeta struct {
 	// ProxyIP is the proxy exit address the traffic arrived through.
@@ -161,6 +172,8 @@ type HeliosHTTPSEvent struct {
 	// Protocol is "https".
 	Protocol string     `json:"protocol"`
 	Meta     HeliosMeta `json:"meta"`
+	// Transport is the tunnel transport the handshake arrived over.
+	Transport HeliosTransport `json:"transport"`
 	// Details is the parsed ClientHello, or nil if the sensor could not parse
 	// the handshake.
 	Details *TLSClientHello `json:"details"`
@@ -169,7 +182,8 @@ type HeliosHTTPSEvent struct {
 }
 
 // TLSClientHello is a TLS ClientHello parsed by a Helios sensor. Fields the
-// sensor could not parse are empty.
+// sensor could not parse are empty. Pointer fields are nil when the sensor
+// did not report them.
 type TLSClientHello struct {
 	// RecordVersion is the record layer version, such as "TLS 1.0".
 	RecordVersion string `json:"record_version"`
@@ -207,6 +221,28 @@ type TLSClientHello struct {
 	SignedCertificateTimestamps bool `json:"signed_certificate_timestamps"`
 	// StatusRequest reports whether the client requested OCSP stapling.
 	StatusRequest bool `json:"status_request"`
+	// SignatureAlgorithmsCert is the TLS 1.3 signature_algorithms_cert
+	// extension.
+	SignatureAlgorithmsCert []TLSCodeName `json:"signature_algorithms_cert"`
+	// RecordVersionCode is RecordVersion as its wire code point, such as 769.
+	RecordVersionCode *int `json:"record_version_code"`
+	// HandshakeVersionCode is HandshakeVersion as its wire code point, such as
+	// 771.
+	HandshakeVersionCode *int `json:"handshake_version_code"`
+	// SupportedVersionCodes are the SupportedVersions entries as wire code
+	// points, in the same order, GREASE values included.
+	SupportedVersionCodes []int `json:"supported_version_codes"`
+	// ALPNHex are the ALPN entries hex-encoded, in the same order.
+	ALPNHex           []string `json:"alpn_hex"`
+	RecordSizeLimit   *int     `json:"record_size_limit"`
+	MaxFragmentLength *int     `json:"max_fragment_length"`
+	// Complete is false when the sensor captured only part of the
+	// ClientHello.
+	Complete *bool `json:"complete"`
+	// Truncated is true when the ClientHello was cut short.
+	Truncated *bool `json:"truncated"`
+	// Transport is the transport the sensor read the handshake from.
+	Transport HeliosTransport `json:"transport"`
 }
 
 // TLSCodeName is a TLS registry code point and its name. GREASE values are
@@ -240,6 +276,8 @@ type HeliosDNSEvent struct {
 	// Protocol is "dns".
 	Protocol string     `json:"protocol"`
 	Meta     HeliosMeta `json:"meta"`
+	// Transport is the tunnel transport the event arrived over.
+	Transport HeliosTransport `json:"transport"`
 }
 
 // HeliosADBEvent is an Android Debug Bridge shell command captured by a
@@ -256,4 +294,6 @@ type HeliosADBEvent struct {
 	// payload. It is not a hash of Command: every command in a session shares
 	// it, and sessions that replay the same script share it too.
 	Hash string `json:"hash"`
+	// Meta is nil on events from sensors that do not send it yet.
+	Meta *HeliosMeta `json:"meta"`
 }

@@ -26,6 +26,28 @@ func ExampleFeed_Download() {
 	}
 }
 
+func ExampleDataset_Download() {
+	client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	params := synthient.DatasetExportParams{Format: synthient.ExportFormatMMDB}
+	body, err := client.Geolocation.Download(context.Background(), synthient.LatestExport, params)
+	if err != nil {
+		log.Fatal(err)
+	}
+	file, err := os.Create("geolocation.mmdb")
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, err = io.Copy(file, body)
+	err = errors.Join(err, file.Close(), body.Close())
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
 func saveExport(ctx context.Context, feed *synthient.Feed[synthient.ProxyEvent], id, path string) error {
 	meta, err := feed.ExportMeta(ctx, id)
 	if err != nil {

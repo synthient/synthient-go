@@ -13,7 +13,7 @@
 
 # synthient-go
 
-`synthient-go` is the official Go SDK for the [Synthient API](https://docs.synthient.com): IP and domain intelligence, account details, and real-time and bulk data feeds.
+`synthient-go` is the official Go SDK for the [Synthient API](https://docs.synthient.com): IP intelligence, account details, and real-time and bulk data feeds.
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/synthient/synthient-go.svg)](https://pkg.go.dev/github.com/synthient/synthient-go)
 [![test](https://github.com/synthient/synthient-go/actions/workflows/test.yml/badge.svg)](https://github.com/synthient/synthient-go/actions/workflows/test.yml)
@@ -58,7 +58,7 @@ Go 1.26 or later. The `synthient` package uses only the standard library.
 
 ## API Keys
 
-Every request needs a Synthient API key. Keys are issued from the Synthient dashboard; if you don't have one, [contact us](mailto:contact@synthient.com). A key's scopes decide what it can call: `BASIC` covers the lookups and `Account`, and each feed has its own scopes, listed under [Feeds](#feeds).
+Every request needs a Synthient API key. Keys are issued from the Synthient dashboard; if you don't have one, [contact us](mailto:contact@synthient.com). A key's scopes decide what it can call: `BASIC` covers the lookups and `Account`, and each feed and dataset has its own scopes, listed under [Feeds](#feeds) and [Datasets](#datasets).
 
 If a request fails even though you are sending a key:
 
@@ -126,7 +126,7 @@ func main() {
 
 ### Look up many IP addresses
 
-Look up as many as 1000 addresses in one request for `ceil(n * 0.9)` credits. Private and reserved addresses are skipped and duplicates are merged, so match results by `IP`.
+Look up a batch of addresses in one request for `ceil(n * 0.9)` credits. The batch cap depends on your plan: 100 on Free, 500 on Starter, and 1000 on Premium and Enterprise, and the API rejects a larger batch with a 422. Private and reserved addresses are skipped and duplicates are merged, so match results by `IP`.
 
 ```go
 results, err := client.LookupIPs(ctx, []netip.Addr{
@@ -140,21 +140,6 @@ for _, result := range results {
 	if result.Intelligence != nil {
 		fmt.Println(result.IP, result.Intelligence.RiskScore)
 	}
-}
-```
-
-### Look up a domain
-
-Get the honeypot traffic observed for a domain and its most recent events. Each lookup costs one credit.
-
-```go
-domain, err := client.LookupDomain(ctx, "example.com", synthient.LookupDomainParams{Limit: 10})
-if err != nil {
-	log.Fatal(err)
-}
-fmt.Println(domain.Status, domain.Stats.Events24h)
-for _, event := range domain.RecentEvents {
-	fmt.Println(event.Timestamp.Time(), event.TargetSubdomain, event.Port)
 }
 ```
 
@@ -178,8 +163,7 @@ fmt.Println(account.Organization.Name, account.Scopes, account.LookupQuota.Credi
 ### [Client](https://pkg.go.dev/github.com/synthient/synthient-go#Client)
 
 - [`LookupIP`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIP) - Look up an IPv4 or IPv6 address
-- [`LookupIPs`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIPs) - Look up as many as 1000 addresses in one request
-- [`LookupDomain`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupDomain) - Look up the honeypot traffic observed for a domain
+- [`LookupIPs`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.LookupIPs) - Look up a batch of addresses in one request
 - [`Account`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.Account) - Get the key's account, scopes, and remaining lookup credits
 - [`Health`](https://pkg.go.dev/github.com/synthient/synthient-go#Client.Health) - Check that the API and its dependencies are healthy
 
@@ -190,6 +174,7 @@ Each feed is a field of the client, such as `client.Proxies`, and has the same m
 - [`Stream`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.Stream) - Iterate over the feed's real-time events
 - [`ListExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ListExports) - List one page of the feed's Parquet exports, newest first
 - [`AllExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.AllExports) - Iterate over every export, fetching pages as needed
+- [`ExportVolume`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ExportVolume) - Get the rows and bytes the feed exported per UTC day
 - [`ExportMeta`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.ExportMeta) - Get an export's checksum, size, row count, and Parquet schema
 - [`Download`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.Download) - Download an export's Parquet file
 - [`DownloadURL`](https://pkg.go.dev/github.com/synthient/synthient-go#Feed.DownloadURL) - Get a presigned URL for an export's Parquet file, valid for 24 hours
@@ -199,11 +184,26 @@ Each feed is a field of the client, such as `client.Proxies`, and has the same m
 | `Proxies`     | Residential, mobile, and datacenter proxies   | `ProxyEvent`       | `PROXY_FIREHOSE`        | `PROXY_FEEDS`         |
 | `Anonymizers` | VPN and anonymizer IP ranges                  | `AnonymizerEvent`  | `ANONYMIZERS_STREAM`    | `ANONYMIZERS_FEED`    |
 | `Torrents`    | BitTorrent DHT and tracker peers              | `TorrentEvent`     | `TORRENTS_STREAM`       | `TORRENTS_FEED`       |
-| `JA4T`        | JA4T TCP fingerprints                         | `JA4TEvent`        | `JA4T_STREAM`           | `JA4T_FEED`           |
 | `HeliosHTTP`  | Helios honeypot HTTP requests                 | `HeliosHTTPEvent`  | `HONEYPOT_HTTP_STREAM`  | `HONEYPOT_HTTP_FEED`  |
 | `HeliosHTTPS` | Helios honeypot TLS ClientHellos              | `HeliosHTTPSEvent` | `HONEYPOT_HTTPS_STREAM` | `HONEYPOT_HTTPS_FEED` |
 | `HeliosDNS`   | Helios honeypot tunnel destinations           | `HeliosDNSEvent`   | `HONEYPOT_DNS_STREAM`   | `HONEYPOT_DNS_FEED`   |
 | `HeliosADB`   | Helios honeypot Android Debug Bridge commands | `HeliosADBEvent`   | `HONEYPOT_ADB_STREAM`   | `HONEYPOT_ADB_FEED`   |
+
+### [Datasets](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset)
+
+Datasets have one export per UTC day and no stream. Each dataset is a field of the client, such as `client.Geolocation`, and has the same methods:
+
+- [`ListExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset.ListExports) - List one page of the dataset's daily exports, newest first
+- [`AllExports`](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset.AllExports) - Iterate over every export, fetching pages as needed
+- [`ExportVolume`](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset.ExportVolume) - Get the rows and bytes the dataset exported per UTC day
+- [`ExportMeta`](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset.ExportMeta) - Get a file's checksum, size, and row count, and list every file of the day
+- [`Download`](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset.Download) - Download a day's file in the format you choose
+- [`DownloadURL`](https://pkg.go.dev/github.com/synthient/synthient-go#Dataset.DownloadURL) - Get a presigned URL for a day's file, valid for 24 hours
+
+| Field         | Data                                    | Scope              | Formats                                   |
+| ------------- | --------------------------------------- | ------------------ | ----------------------------------------- |
+| `Geolocation` | IP geolocation, network, and risk data  | `GEOLOCATION_FEED` | `parquet` (default), `csv` (gzip), `mmdb` |
+| `WHOIS`       | WHOIS registry records as Parquet files | `WHOIS_FEED`       | `tar.gz`                                  |
 
 </details>
 
@@ -229,7 +229,7 @@ for ctx.Err() == nil {
 }
 ```
 
-- The server closes each stream after up to 30 minutes. That ends the inner loop without an error, and the outer loop reconnects at once.
+- The server can close a stream at any time, such as during a deploy. That ends the inner loop without an error, and the outer loop reconnects at once.
 - A 401 or 403 stops the loop, because reconnecting can't fix a rejected key or a missing scope.
 - Any other failure ends the iteration, and the loop waits 2 seconds before reconnecting.
 - Events sent while disconnected are missed. The API has no resume cursor.
@@ -259,11 +259,23 @@ for export, err := range client.Proxies.AllExports(ctx) {
 }
 ```
 
+Set `Day` to list only one UTC day's exports:
+
+```go
+yesterday := synthient.DailyExport(time.Now().AddDate(0, 0, -1))
+for export, err := range client.Proxies.AllExports(ctx, synthient.ListExportsParams{Day: yesterday}) {
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(export.ID, export.Kind, export.RowCount)
+}
+```
+
 On the first page, the newest hourly export has the ID `latest`, a moving alias for the freshest export. Its `Date` and `Hour` give its stable ID, such as `2026-10-14/21`.
 
 ## Downloads
 
-Exports are Parquet files. `Download` returns a file's contents, which you must close:
+Feed exports are Parquet files. `Download` returns a file's contents, which you must close:
 
 ```go
 body, err := client.Proxies.Download(ctx, synthient.LatestExport)
@@ -286,10 +298,33 @@ if err != nil {
 }
 ```
 
-- Name an export by its `ID` from a listing, by `synthient.LatestExport`, or by `synthient.DailyExport(t)` or `synthient.HourlyExport(t)` for a UTC day or hour.
+Datasets offer more formats. This downloads the newest geolocation database as a MaxMind DB:
+
+```go
+mmdb := synthient.DatasetExportParams{Format: synthient.ExportFormatMMDB}
+body, err := client.Geolocation.Download(ctx, synthient.LatestExport, mmdb)
+if err != nil {
+	log.Fatal(err)
+}
+defer body.Close()
+
+file, err := os.Create("geolocation.mmdb")
+if err != nil {
+	log.Fatal(err)
+}
+_, err = io.Copy(file, body)
+err = errors.Join(err, file.Close())
+if err != nil {
+	log.Fatal(err)
+}
+```
+
+- Name an export by its `ID` from a listing, by `synthient.LatestExport`, or by `synthient.DailyExport(t)` or `synthient.HourlyExport(t)` for a UTC day or hour. Datasets have no hourly exports.
 - `ExportMeta` returns the file's SHA-256 checksum. Use a fixed ID for both calls, because `latest` can move between them.
 - `DownloadURL` returns a presigned URL that works without a key for 24 hours, so treat it as a secret. Your API key is never sent to the storage host.
 - Hourly exports roll into the daily export shortly after 00:30 UTC the next day. After that, the hour returns a 400.
+- `Proxies` and `Anonymizers` also publish lite exports, deduplicated to the latest row per address or range and provider. Set `Variant` to `synthient.ExportVariantLite` in `ListExportsParams` to list them. A lite export has the same ID as the full one, so pass `synthient.ExportParams{Variant: synthient.ExportVariantLite}` again to `ExportMeta`, `DownloadURL`, and `Download`.
+- Files come back exactly as served: a `csv` download is a `.csv.gz` file, and a WHOIS download is a `.tar.gz` archive of Parquet files.
 
 ## Retries
 
@@ -380,7 +415,7 @@ if ok {
 | 402    | The team is out of lookup credits                                                               |
 | 403    | The key lacks the scope for the endpoint or feed                                                |
 | 404    | The export doesn't exist, or a daily export is still rolling up (`RetryAfter` is set)           |
-| 422    | The input is invalid, such as a private address or a malformed domain                           |
+| 422    | The input is invalid, such as a private address                                                 |
 | 429    | Rate limited if `RetryAfter` is set; otherwise the budget is spent or too many streams are open |
 | 5xx    | The server failed                                                                               |
 

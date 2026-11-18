@@ -221,6 +221,12 @@ func TestDownloadErrors(t *testing.T) {
 			}),
 		},
 		{
+			name: "not modified",
+			api: newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotModified)
+			}),
+		},
+		{
 			name:       "storage rejects",
 			api:        redirectTo(t, storageURL(storage, "/proxies.parquet")),
 			wantStatus: http.StatusForbidden,

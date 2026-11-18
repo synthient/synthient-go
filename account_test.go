@@ -1,6 +1,7 @@
 package synthient
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -18,7 +19,7 @@ func TestAccount(t *testing.T) {
 			"first_name": "Ada",
 			"last_name": "Lovelace",
 			"organization": {"id": "0b9f6a52-3c1d-4e8a-9f27-6d4c1b8e2a70", "name": "Example", "relation": "OWNER"},
-			"scopes": ["BASIC", "PROXY_FEEDS"],
+			"scopes": ["BASIC", "PROXY_FEEDS", "GEOLOCATION_FEED", "WHOIS_FEED", "HELIOS", "FUTURE_SCOPE"],
 			"lookup_quota": {"credits": 9000000000, "resets_in": 3600},
 			"api_key": {"id": "6f1c2b1e-8f59-4f4b-9d5e-1f0a7d9c3b21", "name": "ci", "created_at": "2026-05-01T12:00:00Z"}
 		}`)
@@ -34,9 +35,9 @@ func TestAccount(t *testing.T) {
 		FirstName:    "Ada",
 		LastName:     "Lovelace",
 		Organization: Organization{ID: "0b9f6a52-3c1d-4e8a-9f27-6d4c1b8e2a70", Name: "Example", Relation: RelationOwner},
-		Scopes:       []Scope{ScopeBasic, ScopeProxyFeeds},
+		Scopes:       []Scope{ScopeBasic, ScopeProxyFeeds, ScopeGeolocationFeed, ScopeWHOISFeed, ScopeHelios, "FUTURE_SCOPE"},
 		LookupQuota:  LookupQuota{Credits: 9000000000, ResetsIn: 3600},
-		APIKey: AccountAPIKey{
+		APIKey: &AccountAPIKey{
 			ID:        "6f1c2b1e-8f59-4f4b-9d5e-1f0a7d9c3b21",
 			Name:      "ci",
 			CreatedAt: time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC),
@@ -44,6 +45,20 @@ func TestAccount(t *testing.T) {
 	}
 	if !reflect.DeepEqual(*account, want) {
 		t.Errorf("Account = %+v, want %+v", *account, want)
+	}
+}
+
+func TestAccountAPIKeyAbsent(t *testing.T) {
+	t.Parallel()
+	for _, body := range []string{`{"api_key":null}`, `{}`} {
+		var account Account
+		err := json.Unmarshal([]byte(body), &account)
+		if err != nil {
+			t.Fatalf("decode %s: %v", body, err)
+		}
+		if account.APIKey != nil {
+			t.Errorf("APIKey for %s = %+v, want nil", body, account.APIKey)
+		}
 	}
 }
 

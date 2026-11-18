@@ -6,6 +6,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"net/netip"
 	"reflect"
 	"strings"
 	"testing"
@@ -187,11 +188,11 @@ func TestAPIErrorOmitsSecrets(t *testing.T) {
 	})
 	c := newTestClient(t, srv)
 
-	_, err := c.LookupDomain(t.Context(), "private.example")
+	_, err := c.LookupIP(t.Context(), netip.MustParseAddr("192.0.2.55"))
 	if err == nil {
-		t.Fatal("LookupDomain succeeded, want an error")
+		t.Fatal("LookupIP succeeded, want an error")
 	}
-	for _, secret := range []string{testAPIKey, "private.example", srv.URL} {
+	for _, secret := range []string{testAPIKey, "192.0.2.55", srv.URL} {
 		if strings.Contains(err.Error(), secret) {
 			t.Errorf("error %q contains %q", err, secret)
 		}

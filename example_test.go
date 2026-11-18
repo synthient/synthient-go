@@ -86,22 +86,6 @@ func ExampleWithResponseHook() {
 	}
 }
 
-func ExampleClient_LookupDomain() {
-	client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	domain, err := client.LookupDomain(context.Background(), "example.com", synthient.LookupDomainParams{Limit: 10})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(domain.Status, domain.Stats.Events24h)
-	for _, event := range domain.RecentEvents {
-		fmt.Println(event.Timestamp.Time(), event.TargetSubdomain, event.Port)
-	}
-}
-
 func ExampleAPIError() {
 	client, err := synthient.NewClient(os.Getenv("SYNTHIENT_API_KEY"))
 	if err != nil {

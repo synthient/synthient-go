@@ -22,12 +22,12 @@ import (
 var schemaTypes = map[string]reflect.Type{
 	"AccountAPIKey":            reflect.TypeFor[AccountAPIKey](),
 	"AccountInfoResponse":      reflect.TypeFor[Account](),
-	"ActivityStatsBlock":       reflect.TypeFor[ActivityStats](),
 	"AnonymizerStreamEntry":    reflect.TypeFor[AnonymizerEvent](),
-	"ASNEntry":                 reflect.TypeFor[ASNCount](),
-	"CountryEntry":             reflect.TypeFor[CountryCount](),
 	"DeviceInfo":               reflect.TypeFor[Device](),
-	"DomainLookupResponse":     reflect.TypeFor[DomainInfo](),
+	"ExportDailyItem":          reflect.TypeFor[ExportVolumeDay](),
+	"ExportDailyResponse":      reflect.TypeFor[ExportVolume](),
+	"ExportEntityFile":         reflect.TypeFor[ExportEntity](),
+	"ExportFormatFile":         reflect.TypeFor[ExportFile](),
 	"ExportListItem":           reflect.TypeFor[Export](),
 	"ExportListResponse":       reflect.TypeFor[ExportPage](),
 	"ExportMetaResponse":       reflect.TypeFor[ExportMeta](),
@@ -44,23 +44,17 @@ var schemaTypes = map[string]reflect.Type{
 	"LookupQuota":              reflect.TypeFor[LookupQuota](),
 	"NetworkInfo":              reflect.TypeFor[Network](),
 	"Organization":             reflect.TypeFor[Organization](),
-	"PortEntry":                reflect.TypeFor[PortCount](),
 	"ProblemDetails":           reflect.TypeFor[problem](),
 	"ProjectedColumn":          reflect.TypeFor[ParquetColumn](),
 	"ProviderEntry":            reflect.TypeFor[Provider](),
 	"ProxyStreamEntry":         reflect.TypeFor[ProxyEvent](),
-	"RecentEvent":              reflect.TypeFor[DomainEvent](),
 	"Schema":                   reflect.TypeFor[ParquetSchema](),
-	"Stats":                    reflect.TypeFor[DomainStats](),
-	"SubdomainEntry":           reflect.TypeFor[SubdomainCount](),
-	"TimeSeriesEntry":          reflect.TypeFor[TimeSeriesPoint](),
 	"TLSClientHello":           reflect.TypeFor[TLSClientHello](),
 	"TLSCodeName":              reflect.TypeFor[TLSCodeName](),
 	"TLSExtension":             reflect.TypeFor[TLSExtension](),
 	"TorrentFileEntry":         reflect.TypeFor[TorrentFile](),
 	"TorrentPeerEntry":         reflect.TypeFor[TorrentPeer](),
 	"TorrentStreamEntry":       reflect.TypeFor[TorrentEvent](),
-	"UniqueIPsBlock":           reflect.TypeFor[UniqueIPs](),
 	"ValidationProblemDetails": reflect.TypeFor[problem](),
 }
 
@@ -326,7 +320,6 @@ func TestSpecOperationsAreCovered(t *testing.T) {
 	covered := map[string]bool{
 		"GET /account/me":             true,
 		"GET /health":                 true,
-		"GET /lookup/domain/{domain}": true,
 		"GET /lookup/ip/{ip_address}": true,
 		"POST /lookup/ips":            true,
 	}
@@ -335,7 +328,12 @@ func TestSpecOperationsAreCovered(t *testing.T) {
 		c.HeliosHTTP.path, c.HeliosHTTPS.path, c.HeliosDNS.path, c.HeliosADB.path,
 	}
 	for _, path := range feedPaths {
-		for _, suffix := range []string{"/export", "/export/{date}", "/export/{date}/meta", "/export/{date}/{hour}", "/export/{date}/{hour}/meta", "/stream"} {
+		for _, suffix := range []string{"/export", "/export/daily", "/export/{date}", "/export/{date}/meta", "/export/{date}/{hour}", "/export/{date}/{hour}/meta", "/stream"} {
+			covered["GET "+path+suffix] = true
+		}
+	}
+	for _, path := range []string{c.Geolocation.path, c.WHOIS.path} {
+		for _, suffix := range []string{"/export", "/export/daily", "/export/{date}", "/export/{date}/meta"} {
 			covered["GET "+path+suffix] = true
 		}
 	}

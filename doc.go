@@ -1,5 +1,5 @@
-// Package synthient is the Go client for the Synthient API: IP and domain
-// intelligence, account details, and the Synthient data feeds.
+// Package synthient is the Go client for the Synthient API: IP intelligence,
+// account details, and the Synthient data feeds and datasets.
 //
 // Create a client with an API key and reuse it for every request:
 //
@@ -31,12 +31,12 @@
 //
 // # Retries
 //
-// Account and feed requests are retried on 500, 502, 503, and 504
+// Account, feed, and dataset requests are retried on 500, 502, 503, and 504
 // responses, on transport errors other than TLS certificate failures and
 // HTTP responses to HTTPS requests, and on 429 responses that carry
-// Retry-After. Billed lookups (LookupIP, LookupIPs, and LookupDomain) and
-// Health are retried only on 429 responses with Retry-After, which the rate
-// limiter returns before doing any work. A 429 without Retry-After means the
+// Retry-After. Billed lookups (LookupIP and LookupIPs) and Health are
+// retried only on 429 responses with Retry-After, which the rate limiter
+// returns before doing any work. A 429 without Retry-After means the
 // key's monthly request budget is spent or it has too many open streams.
 // Response body read failures and the storage request Download sends are
 // never retried. Billed requests use non-rewindable bodies so the transport
@@ -55,6 +55,9 @@
 //		}
 //		fmt.Println(event.IP, event.Provider)
 //	}
+//
+// The datasets, Client.Geolocation and Client.WHOIS, have daily exports and
+// no stream.
 //
 // # Timeouts
 //

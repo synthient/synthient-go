@@ -13,11 +13,11 @@ import (
 const maxEventSize = 16 << 20
 
 // Stream returns an iterator over the feed's real-time events. Each range
-// opens a new connection, which the server closes after up to 30 minutes;
-// that close ends the iteration without an error. Any other failure is
-// yielded once and ends the iteration. Breaking out of the loop closes the
-// connection. Events sent between connections are missed, so range again
-// to reconnect.
+// opens a new connection, which the server can close at any time, such as
+// during a deploy; that close ends the iteration without an error. Any other
+// failure is yielded once and ends the iteration. Breaking out of the loop
+// closes the connection. Events sent between connections are missed, so
+// range again to reconnect.
 func (f *Feed[T]) Stream(ctx context.Context) iter.Seq2[T, error] {
 	return func(yield func(T, error) bool) {
 		var zero T

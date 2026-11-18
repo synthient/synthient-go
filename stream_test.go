@@ -51,7 +51,10 @@ func TestStreamHeliosEvents(t *testing.T) {
 	t.Parallel()
 	newClient := func(t *testing.T, body string) *Client {
 		t.Helper()
-		srv := newTestServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		srv := newTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+			if !strings.HasPrefix(r.URL.Path, "/api/v4/feeds/helios/") || !strings.HasSuffix(r.URL.Path, "/stream") {
+				t.Errorf("path = %q, want a Helios stream path", r.URL.Path)
+			}
 			_, _ = io.WriteString(w, body)
 		})
 		return newTestClient(t, srv)
@@ -61,10 +64,15 @@ func TestStreamHeliosEvents(t *testing.T) {
 
 	t.Run("https", func(t *testing.T) {
 		t.Parallel()
-		c := newClient(t, `{"timestamp":1778200137487,"tunnel_id":17257744507466107949,"domain":"example.com","port":443,"protocol":"https",`+metaJSON+`,`+
+		c := newClient(t, `{"timestamp":1778200137487,"tunnel_id":17257744507466107949,"domain":"example.com","port":443,"protocol":"https",`+metaJSON+`,"transport":"tcp",`+
 			`"details":{"sni":"example.com","handshake_version":"TLS 1.2","cipher_suites":[{"code":4865,"name":"TLS_AES_128_GCM_SHA256"}],"extensions":[{"code":0,"name":"server_name","length":16}],"has_grease":true},"raw":null}`+"\n"+
-			`{"timestamp":1778200137488,"details":null,"raw":null}`+"\n")
+			`{"timestamp":1778200137488,"transport":"sctp","details":{"record_version":"TLS 1.0","record_version_code":769,"handshake_version":"TLS 1.2","handshake_version_code":771,`+
+			`"supported_version_codes":[2570,772,771],"alpn_hex":["6832","687474702f312e31"],"signature_algorithms_cert":[{"code":2052,"name":"rsa_pss_rsae_sha256"}],`+
+			`"record_size_limit":16385,"max_fragment_length":0,"complete":false,"truncated":true,"transport":"tcp"},"raw":null}`+"\n"+
+			`{"timestamp":1778200137489,"details":null,"raw":null}`+"\n")
 
+		recordVersion, handshakeVersion, recordSizeLimit, maxFragmentLength := 769, 771, 16385, 0
+		complete, truncated := false, true
 		events := streamEvents(t, c.HeliosHTTPS)
 		want := []HeliosHTTPSEvent{
 			{
@@ -74,6 +82,7 @@ func TestStreamHeliosEvents(t *testing.T) {
 				Port:      443,
 				Protocol:  "https",
 				Meta:      meta,
+				Transport: HeliosTransportTCP,
 				Details: &TLSClientHello{
 					SNI:              "example.com",
 					HandshakeVersion: "TLS 1.2",
@@ -82,7 +91,25 @@ func TestStreamHeliosEvents(t *testing.T) {
 					HasGREASE:        true,
 				},
 			},
-			{Timestamp: 1778200137488},
+			{
+				Timestamp: 1778200137488,
+				Transport: "sctp",
+				Details: &TLSClientHello{
+					RecordVersion:           "TLS 1.0",
+					RecordVersionCode:       &recordVersion,
+					HandshakeVersion:        "TLS 1.2",
+					HandshakeVersionCode:    &handshakeVersion,
+					SupportedVersionCodes:   []int{2570, 772, 771},
+					ALPNHex:                 []string{"6832", "687474702f312e31"},
+					SignatureAlgorithmsCert: []TLSCodeName{{Code: 2052, Name: "rsa_pss_rsae_sha256"}},
+					RecordSizeLimit:         &recordSizeLimit,
+					MaxFragmentLength:       &maxFragmentLength,
+					Complete:                &complete,
+					Truncated:               &truncated,
+					Transport:               HeliosTransportTCP,
+				},
+			},
+			{Timestamp: 1778200137489},
 		}
 		if !reflect.DeepEqual(events, want) {
 			t.Errorf("events = %+v, want %+v", events, want)
@@ -110,10 +137,29 @@ func TestStreamHeliosEvents(t *testing.T) {
 
 	t.Run("dns", func(t *testing.T) {
 		t.Parallel()
-		c := newClient(t, `{"timestamp":1714780800123,"tunnel_id":18446744073709551615,"domain":"api.ipify.org","port":443,"protocol":"dns",`+metaJSON+`}`+"\n")
+		c := newClient(t, `{"timestamp":1714780800123,"tunnel_id":18446744073709551615,"domain":"api.ipify.org","port":443,"protocol":"dns",`+metaJSON+`,"transport":"quic"}`+"\n"+
+			`{"timestamp":1714780800124,"protocol":"dns","transport":"wireguard"}`+"\n")
 
 		events := streamEvents(t, c.HeliosDNS)
-		want := []HeliosDNSEvent{{Timestamp: 1714780800123, TunnelID: 18446744073709551615, Domain: "api.ipify.org", Port: 443, Protocol: "dns", Meta: meta}}
+		want := []HeliosDNSEvent{
+			{Timestamp: 1714780800123, TunnelID: 18446744073709551615, Domain: "api.ipify.org", Port: 443, Protocol: "dns", Meta: meta, Transport: HeliosTransportQUIC},
+			{Timestamp: 1714780800124, Protocol: "dns", Transport: "wireguard"},
+		}
+		if !reflect.DeepEqual(events, want) {
+			t.Errorf("events = %+v, want %+v", events, want)
+		}
+	})
+
+	t.Run("adb", func(t *testing.T) {
+		t.Parallel()
+		c := newClient(t, `{"session":"00075b3dde7ddb645347a137f01ac991","sequential_id":3,"command":"cd /data/local/tmp","hash":"cd6d",`+metaJSON+`}`+"\n"+
+			`{"session":"00075b3dde7ddb645347a137f01ac991","sequential_id":4,"command":"id","hash":"cd6d","meta":null}`+"\n")
+
+		events := streamEvents(t, c.HeliosADB)
+		want := []HeliosADBEvent{
+			{Session: "00075b3dde7ddb645347a137f01ac991", SequentialID: 3, Command: "cd /data/local/tmp", Hash: "cd6d", Meta: &meta},
+			{Session: "00075b3dde7ddb645347a137f01ac991", SequentialID: 4, Command: "id", Hash: "cd6d"},
+		}
 		if !reflect.DeepEqual(events, want) {
 			t.Errorf("events = %+v, want %+v", events, want)
 		}

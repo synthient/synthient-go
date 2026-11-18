@@ -55,9 +55,9 @@ type Schema struct {
 }
 
 // Fetch uses server reflection to fetch the protobuf files that define
-// Options.Symbols, along with all of their imports. apiKey is sent as
-// x-api-key metadata when it is not empty. opts is optional, and only the
-// first is used.
+// Options.Symbols, along with all of their imports. Server reflection
+// requires apiKey, which is sent as x-api-key metadata. opts is optional,
+// and only the first is used.
 func Fetch(ctx context.Context, apiKey string, opts ...Options) (*Schema, error) {
 	var o Options
 	if len(opts) > 0 {
