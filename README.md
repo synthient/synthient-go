@@ -229,7 +229,7 @@ for ctx.Err() == nil {
 }
 ```
 
-- The server can close a stream at any time, such as during a deploy. That ends the inner loop without an error, and the outer loop reconnects at once.
+- The server closes each stream after up to 30 minutes. That ends the inner loop without an error, and the outer loop reconnects at once.
 - A 401 or 403 stops the loop, because reconnecting can't fix a rejected key or a missing scope.
 - Any other failure ends the iteration, and the loop waits 2 seconds before reconnecting.
 - Events sent while disconnected are missed. The API has no resume cursor.
